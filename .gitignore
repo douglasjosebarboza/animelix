@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Next.js
+.next/
+out/
+*.tsbuildinfo
+
+# Tests
+coverage/
+playwright-report/
+test-results/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.log
