@@ -1,0 +1,3 @@
+# Postgres on Neon with Prisma
+
+Animelix runs on PostgreSQL hosted by Neon and uses Prisma as the ORM. Neon was chosen over a local Postgres in Docker for development and over SQLite because we want a hosted database from day one that mirrors production, and Prisma over Drizzle because its schema-first migrations are more transparent for a small team and the generated client removes a class of query bugs. The cost is that local development still needs a network round-trip to Neon (mitigated by Neon's free tier and branching), and that the Prisma runtime is heavier than Drizzle's at the query layer.
