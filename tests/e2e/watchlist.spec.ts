@@ -17,10 +17,14 @@ test("add to watchlist -> mark -> undo -> mark again", async ({ page }) => {
   await page.getByRole("button", { name: /entrar/i }).click();
   await expect(page).toHaveURL(/\/watchlist/);
 
-  // Search and add the first result
+  // Search and add the first result (catalogs the Anime)
   await page.goto("/search?q=frieren");
   await expect(page.getByText(/resultado/i)).toBeVisible();
   await page.getByRole("button", { name: "Adicionar" }).first().click();
+  await expect(page).toHaveURL(/\/anime\/\d+/);
+
+  // Add the catalogued Anime to the watchlist
+  await page.getByRole("button", { name: /add to watchlist/i }).click();
   await expect(page).toHaveURL(/\/watchlist\/\d+/);
 
   // Mark episode 1
