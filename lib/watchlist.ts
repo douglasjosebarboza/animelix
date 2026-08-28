@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getAnime } from "@/lib/catalogue";
 import { computeNextStatus, type WatchStatus } from "@/lib/watchstatus";
+import { shouldAutoPause } from "@/lib/autopause";
 
 export class WatchlistError extends Error {
   constructor(message: string) {
@@ -167,6 +168,59 @@ export async function setWatchStatus(
   }
 }
 
+export async function setAutoPause(
+  userId: string,
+  anilistId: number,
+  enabled: boolean,
+): Promise<void> {
+  const animeId = await resolveAnimeId(anilistId);
+  try {
+    await prisma.watchEntry.update({
+      where: { userId_animeId: { userId, animeId } },
+      data: { autoPauseEnabled: enabled },
+    });
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2025"
+    ) {
+      throw new WatchlistError("Anime não está na sua watchlist");
+    }
+    throw err;
+  }
+}
+
+export async function runAutoPauseJob(now: Date = new Date()): Promise<number> {
+  const candidates = await prisma.watchEntry.findMany({
+    where: {
+      status: { in: ["watching", "plan_to_watch"] },
+      autoPauseEnabled: true,
+      episodeWatches: { some: {} },
+    },
+    include: { episodeWatches: true },
+  });
+  let paused = 0;
+  for (const entry of candidates) {
+    const last = maxWatchedAt(entry as EntryWithRelations);
+    if (
+      shouldAutoPause({
+        status: entry.status as WatchStatus,
+        lastWatchedAt: last,
+        autoPauseEnabled: entry.autoPauseEnabled,
+        now,
+      })
+    ) {
+      await applyTransition(entry.id, entry.status as WatchStatus, {
+        from: entry.status as WatchStatus,
+        to: "paused",
+        reason: "auto_paused",
+      });
+      paused++;
+    }
+  }
+  return paused;
+}
+
 export async function undoLastEpisodeWatch(
   userId: string,
   anilistId: number,
@@ -203,14 +257,19 @@ export async function listWatchEntries(userId: string) {
 }
 
 async function evaluateAutoPause(entry: EntryWithRelations): Promise<void> {
-  const last = maxWatchedAt(entry);
-  const daysSince = last ? (Date.now() - last.getTime()) / 864e5 : Infinity;
-  const transition = computeNextStatus(entry.status as WatchStatus, {
-    type: "timeTick",
-    daysSinceLastWatch: daysSince,
-    autoPauseEnabled: entry.autoPauseEnabled,
-  });
-  if (transition) {
-    await applyTransition(entry.id, entry.status as WatchStatus, transition);
+  if (
+    !shouldAutoPause({
+      status: entry.status as WatchStatus,
+      lastWatchedAt: maxWatchedAt(entry),
+      autoPauseEnabled: entry.autoPauseEnabled,
+      now: new Date(),
+    })
+  ) {
+    return;
   }
+  await applyTransition(entry.id, entry.status as WatchStatus, {
+    from: entry.status as WatchStatus,
+    to: "paused",
+    reason: "auto_paused",
+  });
 }
