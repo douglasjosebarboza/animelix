@@ -32,12 +32,19 @@ export function computeNextStatus(
         return { from: current, to: "watching", reason: "user_status_change" };
       }
       // Watching an entry whose every cached episode is now watched completes it.
-      if (
-        current === "watching" &&
-        action.total != null &&
-        action.distinctWatched >= action.total
-      ) {
-        return { from: current, to: "completed", reason: "auto_completed" };
+      if (current === "watching") {
+        if (action.total != null && action.distinctWatched >= action.total) {
+          return { from: current, to: "completed", reason: "auto_completed" };
+        }
+        return null;
+      }
+      // A paused entry resumes to watching when the user watches again. If the
+      // resumed watch happens to complete the series, go straight to completed.
+      if (current === "paused") {
+        if (action.total != null && action.distinctWatched >= action.total) {
+          return { from: current, to: "completed", reason: "auto_completed" };
+        }
+        return { from: current, to: "watching", reason: "user_status_change" };
       }
       return null;
     }
