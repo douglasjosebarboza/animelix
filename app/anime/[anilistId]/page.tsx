@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { getAnime } from "@/lib/catalogue";
 import { getWatchEntry } from "@/lib/watchlist";
 import { refreshAnimeAction } from "@/lib/anime-actions";
-import { addToWatchlistAction } from "@/lib/watchlist-actions";
+import { addToWatchlistAction, setAutoPauseAction } from "@/lib/watchlist-actions";
 
 export default async function AnimePage({
   params,
@@ -117,6 +117,31 @@ export default async function AnimePage({
               </button>
             </form>
           </div>
+
+          {entry && (
+            <form
+              action={setAutoPauseAction}
+              className="mt-4 flex items-center gap-3 rounded-md border border-neutral-800 p-3"
+            >
+              <input type="hidden" name="anilistId" value={anilistId} />
+              <input
+                type="checkbox"
+                name="enabled"
+                value="on"
+                defaultChecked={entry.autoPauseEnabled}
+                className="h-4 w-4"
+              />
+              <span className="flex-1 text-xs text-neutral-400">
+                Pausar automaticamente após inatividade
+              </span>
+              <button
+                type="submit"
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-900"
+              >
+                Salvar
+              </button>
+            </form>
+          )}
 
           <a href="/search" className="mt-4 inline-block text-sm text-emerald-400">
             ← Voltar à busca

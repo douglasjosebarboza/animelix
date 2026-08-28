@@ -36,12 +36,20 @@ export default async function WatchlistPage() {
           </form>
         </div>
 
-        <a
-          href="/search"
-          className="mt-6 inline-block text-sm text-emerald-400 hover:underline"
-        >
-          + Buscar animes na AniList
-        </a>
+        <div className="mt-6 flex gap-4">
+          <a
+            href="/search"
+            className="text-sm text-emerald-400 hover:underline"
+          >
+            + Buscar animes na AniList
+          </a>
+          <a
+            href="/activity"
+            className="text-sm text-emerald-400 hover:underline"
+          >
+            Ver atividade
+          </a>
+        </div>
 
         {entries.length === 0 ? (
           <p className="mt-6 text-sm text-neutral-500">

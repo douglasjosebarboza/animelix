@@ -9,6 +9,7 @@ import {
   markEpisodeWatched,
   undoLastEpisodeWatch,
   setWatchStatus,
+  setAutoPause,
   WatchlistError,
 } from "@/lib/watchlist";
 import type { WatchStatus } from "@/lib/watchstatus";
@@ -74,5 +75,14 @@ export async function setWatchStatusAction(formData: FormData): Promise<void> {
     throw new Error(`status inválido: ${status}`);
   }
   await setWatchStatus(userId, anilistId, status);
+  revalidatePath(`/watchlist/${anilistId}`);
+}
+
+export async function setAutoPauseAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const anilistId = Number(formData.get("anilistId"));
+  const enabled = formData.get("enabled") === "on";
+  await setAutoPause(userId, anilistId, enabled);
+  revalidatePath(`/anime/${anilistId}`);
   revalidatePath(`/watchlist/${anilistId}`);
 }
