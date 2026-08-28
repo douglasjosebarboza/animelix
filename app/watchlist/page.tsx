@@ -32,8 +32,15 @@ export default async function WatchlistPage() {
       </div>
 
       <p className="mx-auto mt-8 max-w-2xl text-sm text-neutral-500">
-        Nenhum anime na sua lista ainda. (Catálogo chega no próximo ticket.)
+        Nenhum anime na sua lista ainda.
       </p>
+
+      <a
+        href="/search"
+        className="mx-auto mt-4 block max-w-2xl text-sm text-emerald-400 hover:underline"
+      >
+        Buscar animes na AniList →
+      </a>
     </main>
   );
 }

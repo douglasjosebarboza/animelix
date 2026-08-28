@@ -13,3 +13,15 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 }
+
+model Anime {
+  id            String   @id @default(cuid())
+  anilistId     Int      @unique
+  title         String
+  coverImageUrl String?
+  episodeCount  Int?
+  seasonCount   Int?
+  snapshotAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
