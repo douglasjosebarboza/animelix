@@ -1,15 +1,11 @@
-import { redirect } from "next/navigation";
-import { auth, signOut } from "@/auth";
+import { requireUser, signOut } from "@/auth";
 import { listWatchEntries } from "@/lib/watchlist";
-import { removeFromWatchlistAction } from "@/lib/watchlist-actions";
+import { removeFromWatchlistAction, deleteAccountAction } from "@/lib/watchlist-actions";
 
 export default async function WatchlistPage() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
-  const entries = await listWatchEntries(session.user.id);
+  const entries = await listWatchEntries(user.id);
 
   return (
     <main className="min-h-screen bg-neutral-950 p-8 text-neutral-100">
@@ -18,7 +14,7 @@ export default async function WatchlistPage() {
           <div>
             <h1 className="text-2xl font-semibold">Minha Watchlist</h1>
             <p className="text-sm text-neutral-400">
-              Logado como {session.user.email}
+              Logado como {user.email}
             </p>
           </div>
           <form
@@ -32,6 +28,14 @@ export default async function WatchlistPage() {
               className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-900"
             >
               Sair
+            </button>
+          </form>
+          <form action={deleteAccountAction}>
+            <button
+              type="submit"
+              className="rounded-md border border-red-800 px-3 py-2 text-sm text-red-300 hover:bg-red-950"
+            >
+              Excluir conta
             </button>
           </form>
         </div>

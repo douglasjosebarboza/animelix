@@ -2,7 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { deleteAccount } from "@/lib/account";
 import {
   addToWatchlist,
   removeFromWatchlist,
@@ -17,6 +19,10 @@ import type { WatchStatus } from "@/lib/watchstatus";
 async function requireUserId(): Promise<string> {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+  // A deleted account still carries a (stateless JWT) session until sign-out;
+  // treat a missing user row as unauthenticated so stale tokens are rejected.
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user) redirect("/login");
   return session.user.id;
 }
 
@@ -85,4 +91,10 @@ export async function setAutoPauseAction(formData: FormData): Promise<void> {
   await setAutoPause(userId, anilistId, enabled);
   revalidatePath(`/anime/${anilistId}`);
   revalidatePath(`/watchlist/${anilistId}`);
+}
+
+export async function deleteAccountAction(): Promise<void> {
+  const userId = await requireUserId();
+  await deleteAccount(userId);
+  await signOut({ redirectTo: "/login" });
 }

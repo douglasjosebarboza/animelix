@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAnime } from "@/lib/catalogue";
 import { computeNextStatus, type WatchStatus } from "@/lib/watchstatus";
 import { shouldAutoPause } from "@/lib/autopause";
+import { logEvent } from "@/lib/logger";
 
 export class WatchlistError extends Error {
   constructor(message: string) {
@@ -215,9 +216,15 @@ export async function runAutoPauseJob(now: Date = new Date()): Promise<number> {
         to: "paused",
         reason: "auto_paused",
       });
+      logEvent("auto_pause", {
+        watchEntryId: entry.id,
+        animeId: entry.animeId,
+        reason: "auto_paused",
+      });
       paused++;
     }
   }
+  logEvent("auto_pause_job", { evaluated: candidates.length, paused });
   return paused;
 }
 
@@ -272,4 +279,5 @@ async function evaluateAutoPause(entry: EntryWithRelations): Promise<void> {
     to: "paused",
     reason: "auto_paused",
   });
+  logEvent("auto_pause", { watchEntryId: entry.id, animeId: entry.animeId, reason: "auto_paused" });
 }

@@ -79,15 +79,27 @@ describe("AniList client", () => {
     expect(anime.title).toBe("Anime 42");
   });
 
-  it("deduplicates concurrent requests for the same query (single HTTP call)", async () => {
+  it("deduplicates 10 concurrent reads into exactly 1 AniList call", async () => {
     const spy = vi.spyOn(globalThis, "fetch");
-    const [a, b] = await Promise.all([getAnimeById(7), getAnimeById(7)]);
-    expect(a).toEqual(b);
-    // one in-flight entry -> only one network request for identical args
-    const calls = (spy.mock.calls as unknown[][]).filter((c) =>
+
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () => getAnimeById(7)),
+    );
+    // all share the same resolved value
+    for (const r of results) expect(r).toEqual(results[0]);
+
+    // spy-level: exactly one network request left the process for this query
+    const netCalls = (spy.mock.calls as unknown[][]).filter((c) =>
       String(c[0]).includes(stubUrl),
     );
-    expect(calls).toHaveLength(1);
+    expect(netCalls).toHaveLength(1);
+    spy.mockRestore();
+
+    // server-level: the stub received exactly one ById request for id 7
+    const serverCalls = received.filter(
+      (r) => r.query.includes("ById") && r.variables.id === 7,
+    );
+    expect(serverCalls).toHaveLength(1);
   });
 
   it("throws AnilistError when the API returns 500", async () => {

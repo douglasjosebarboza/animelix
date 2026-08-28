@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { requireUser } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import type { WatchStatus } from "@/lib/watchstatus";
 
@@ -31,11 +30,10 @@ function relativeTime(d: Date): string {
 }
 
 export default async function ActivityPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const user = await requireUser();
 
   const transitions = await prisma.statusTransition.findMany({
-    where: { watchEntry: { userId: session.user.id } },
+    where: { watchEntry: { userId: user.id } },
     include: { watchEntry: { include: { anime: true } } },
     orderBy: { occurredAt: "desc" },
   });

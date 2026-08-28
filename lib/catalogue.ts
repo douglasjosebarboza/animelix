@@ -1,6 +1,7 @@
 import { Prisma, type Anime } from "@prisma/client";
 import { getAnimeById, searchAnime as anilistSearch, type AnimeSeed } from "@/lib/anilist";
 import { prisma } from "@/lib/prisma";
+import { logEvent } from "@/lib/logger";
 
 const SNAPSHOT_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -32,6 +33,7 @@ export async function searchAnime(query: string): Promise<AnimeSeed[]> {
 }
 
 export async function refreshAnime(anilistId: number): Promise<Anime> {
+  logEvent("anilist_refresh", { anilistId, trigger: "manual" });
   const seed = await getAnimeById(anilistId);
   return upsertSeed(seed);
 }
@@ -40,16 +42,20 @@ export async function getAnime(anilistId: number): Promise<Anime> {
   const cached = await prisma.anime.findUnique({ where: { anilistId } });
 
   if (!cached) {
+    logEvent("anilist_cache", { anilistId, hit: false });
     const seed = await getAnimeById(anilistId);
     return upsertSeed(seed);
   }
 
   const isStale = Date.now() - cached.snapshotAt.getTime() > SNAPSHOT_TTL_MS;
+  logEvent("anilist_cache", { anilistId, hit: true, stale: isStale });
+
   if (isStale) {
     // Fire-and-forget: refresh in the background and always return the cache,
     // so a read never blocks on or fails because of AniList.
+    logEvent("anilist_refresh", { anilistId, trigger: "stale" });
     void refreshAnime(anilistId).catch((err) =>
-      console.error(`[catalogue] refresh em background falhou para ${anilistId}:`, err),
+      logEvent("anilist_error", { anilistId, trigger: "stale", error: String(err) }),
     );
   }
 

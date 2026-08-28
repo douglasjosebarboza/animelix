@@ -93,7 +93,7 @@ describe("catalogue getAnime", () => {
   });
 
   it("stale cache with AniList failure: still returns cache, logs and does not throw", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     findUnique.mockResolvedValue(seed(5, 48));
     getById.mockRejectedValue(new Error("AniList 503"));
 
@@ -102,8 +102,10 @@ describe("catalogue getAnime", () => {
 
     await new Promise((r) => setTimeout(r, 10));
     expect(getById).toHaveBeenCalledWith(5);
-    expect(errorSpy).toHaveBeenCalled();
-    errorSpy.mockRestore();
+    expect(logSpy).toHaveBeenCalled();
+    const logged = logSpy.mock.calls.map((c) => String(c[0])).join(" ");
+    expect(logged).toContain("anilist_error");
+    logSpy.mockRestore();
   });
 });
 

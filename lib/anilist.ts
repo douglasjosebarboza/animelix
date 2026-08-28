@@ -1,3 +1,5 @@
+import { logEvent } from "@/lib/logger";
+
 function anilistEndpoint(): string {
   return process.env.ANILIST_GRAPHQL_URL ?? "https://graphql.anilist.co";
 }
@@ -67,15 +69,18 @@ async function request<T>(query: string, variables: Record<string, unknown>): Pr
         body: JSON.stringify({ query, variables }),
       });
     } catch (cause) {
+      logEvent("anilist_error", { error: `network: ${(cause as Error).message}` });
       throw new AnilistError(`Falha de rede ao chamar AniList: ${(cause as Error).message}`);
     }
 
     if (!res.ok) {
+      logEvent("anilist_error", { status: res.status });
       throw new AnilistError(`AniList respondeu ${res.status}`, res.status);
     }
 
     const json = (await res.json()) as GraphQLResponse<T>;
     if (json.errors?.length) {
+      logEvent("anilist_error", { errors: json.errors.map((e) => e.message) });
       throw new AnilistError(json.errors.map((e) => e.message).join("; "));
     }
     if (!json.data) {
