@@ -181,8 +181,16 @@ export async function undoLastEpisodeWatch(
     where: { watchEntryId: entry.id },
     orderBy: [{ watchedAt: "desc" }, { createdAt: "desc" }],
   });
-  if (latest) {
-    await prisma.episodeWatch.delete({ where: { id: latest.id } });
+  if (!latest) return;
+  await prisma.episodeWatch.delete({ where: { id: latest.id } });
+
+  // Undoing the last watched episode leaves nothing tracked: drop the entry
+  // from the watchlist entirely.
+  const remaining = await prisma.episodeWatch.count({
+    where: { watchEntryId: entry.id },
+  });
+  if (remaining === 0) {
+    await prisma.watchEntry.delete({ where: { id: entry.id } });
   }
 }
 

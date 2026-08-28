@@ -50,8 +50,16 @@ describe("computeNextStatus — markEpisode", () => {
     expect(computeNextStatus("completed", mark(13, 12))).toBeNull();
   });
 
-  it("paused does not auto-resume on mark", () => {
-    expect(computeNextStatus("paused", mark(1, 12, true))).toBeNull();
+  it("paused + new episode resumes to watching (user_status_change)", () => {
+    expect(computeNextStatus("paused", mark(2, 12))).toEqual({
+      from: "paused",
+      to: "watching",
+      reason: "user_status_change",
+    });
+  });
+
+  it("paused + resumed watch that completes the series -> completed", () => {
+    expect(computeNextStatus("paused", mark(12, 12))?.to).toBe("completed");
   });
 
   it("dropped stays dropped on mark", () => {
