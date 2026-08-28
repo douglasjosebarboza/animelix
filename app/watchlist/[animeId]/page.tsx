@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { redirect, notFound } from "next/navigation";
+import { requireUser } from "@/auth";
 import { getWatchEntry } from "@/lib/watchlist";
 import { computeProgress } from "@/lib/progress";
 import {
@@ -18,15 +18,14 @@ export default async function WatchEntryPage({
 }: {
   params: Promise<{ animeId: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const user = await requireUser();
 
   const { animeId: raw } = await params;
   const anilistId = Number(raw);
   if (!Number.isFinite(anilistId)) redirect("/search");
 
-  const entry = await getWatchEntry(session.user.id, anilistId);
-  if (!entry) redirect(`/anime/${anilistId}`);
+  const entry = await getWatchEntry(user.id, anilistId);
+  if (!entry) notFound();
 
   const total = entry.anime.episodeCount;
   const progress = computeProgress(entry.episodeWatches, total);
