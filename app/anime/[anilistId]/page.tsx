@@ -1,19 +1,24 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getAnime } from "@/lib/catalogue";
+import { getWatchEntry } from "@/lib/watchlist";
 import { refreshAnimeAction } from "@/lib/anime-actions";
+import { addToWatchlistAction } from "@/lib/watchlist-actions";
 
 export default async function AnimePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ anilistId: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.id) {
     redirect("/login");
   }
 
   const { anilistId: raw } = await params;
+  const { error } = await searchParams;
   const anilistId = Number(raw);
 
   if (!Number.isFinite(anilistId)) {
@@ -40,6 +45,8 @@ export default async function AnimePage({
       </main>
     );
   }
+
+  const entry = await getWatchEntry(session.user.id, anilistId);
 
   return (
     <main className="min-h-screen bg-neutral-950 p-8 text-neutral-100">
@@ -74,15 +81,42 @@ export default async function AnimePage({
             </p>
           )}
 
-          <form action={refreshAnimeAction} className="mt-4">
-            <input type="hidden" name="anilistId" value={anime.anilistId} />
-            <button
-              type="submit"
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500"
-            >
-              Refresh from AniList
-            </button>
-          </form>
+          {error === "already_in_watchlist" && (
+            <p className="mt-3 rounded-md border border-amber-700 bg-amber-950 p-2 text-xs text-amber-300">
+              Este anime já está na sua watchlist.
+            </p>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {entry ? (
+              <a
+                href={`/watchlist/${anilistId}`}
+                className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium hover:bg-emerald-600"
+              >
+                Ver na watchlist
+              </a>
+            ) : (
+              <form action={addToWatchlistAction}>
+                <input type="hidden" name="anilistId" value={anilistId} />
+                <button
+                  type="submit"
+                  className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500"
+                >
+                  Add to watchlist
+                </button>
+              </form>
+            )}
+
+            <form action={refreshAnimeAction}>
+              <input type="hidden" name="anilistId" value={anilistId} />
+              <button
+                type="submit"
+                className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-900"
+              >
+                Refresh from AniList
+              </button>
+            </form>
+          </div>
 
           <a href="/search" className="mt-4 inline-block text-sm text-emerald-400">
             ← Voltar à busca
