@@ -12,6 +12,8 @@ model User {
   email        String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
+
+  watchEntries WatchEntry[]
 }
 
 model Anime {
@@ -24,4 +26,39 @@ model Anime {
   snapshotAt    DateTime @default(now())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  watchEntries  WatchEntry[]
+}
+
+model WatchEntry {
+  id               String   @id @default(cuid())
+  userId           String
+  animeId          String
+  status           String   @default("plan_to_watch")
+  lastEpisodeSeason Int?
+  lastEpisodeNumber Int?
+  lastWatchedAt    DateTime?
+  notes            String?
+  autoPauseEnabled Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anime          Anime         @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  episodeWatches EpisodeWatch[]
+
+  @@unique([userId, animeId])
+}
+
+model EpisodeWatch {
+  id          String   @id @default(cuid())
+  watchEntryId String
+  season      Int      @default(1)
+  episode     Int
+  watchedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  watchEntry  WatchEntry @relation(fields: [watchEntryId], references: [id], onDelete: Cascade)
+
+  @@index([watchEntryId, season, episode])
 }
