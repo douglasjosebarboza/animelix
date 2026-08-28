@@ -1,32 +1,19 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/auth";
-
-const credentialsSchema = z.object({
-  email: z.string().email("Informe um email válido"),
-  password: z.string().min(8, "A senha precisa ter ao menos 8 caracteres"),
-});
-
-export type AuthResult = { error?: string };
+import { parseCredentials, type AuthResult } from "@/lib/credentials";
 
 export async function registerAction(
   _prev: AuthResult,
   formData: FormData,
 ): Promise<AuthResult> {
-  const parsed = credentialsSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
+  const parsed = parseCredentials(formData);
+  if ("error" in parsed) return parsed;
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
-  }
-
-  const { email, password } = parsed.data;
+  const { email, password } = parsed;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -43,19 +30,13 @@ export async function loginAction(
   _prev: AuthResult,
   formData: FormData,
 ): Promise<AuthResult> {
-  const parsed = credentialsSchema.safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos" };
-  }
+  const parsed = parseCredentials(formData);
+  if ("error" in parsed) return parsed;
 
   try {
     await signIn("credentials", {
-      email: parsed.data.email,
-      password: parsed.data.password,
+      email: parsed.email,
+      password: parsed.password,
       redirectTo: "/watchlist",
     });
     return {};

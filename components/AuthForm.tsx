@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import type { AuthResult } from "@/lib/actions";
+import type { AuthResult } from "@/lib/credentials";
 
 type Props = {
   mode: "login" | "register";
