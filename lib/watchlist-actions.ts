@@ -8,8 +8,10 @@ import {
   removeFromWatchlist,
   markEpisodeWatched,
   undoLastEpisodeWatch,
+  setWatchStatus,
   WatchlistError,
 } from "@/lib/watchlist";
+import type { WatchStatus } from "@/lib/watchstatus";
 
 async function requireUserId(): Promise<string> {
   const session = await auth();
@@ -53,5 +55,24 @@ export async function undoLastAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const anilistId = Number(formData.get("anilistId"));
   await undoLastEpisodeWatch(userId, anilistId);
+  revalidatePath(`/watchlist/${anilistId}`);
+}
+
+const STATUSES: WatchStatus[] = [
+  "plan_to_watch",
+  "watching",
+  "completed",
+  "paused",
+  "dropped",
+];
+
+export async function setWatchStatusAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const anilistId = Number(formData.get("anilistId"));
+  const status = String(formData.get("status") ?? "") as WatchStatus;
+  if (!STATUSES.includes(status)) {
+    throw new Error(`status inválido: ${status}`);
+  }
+  await setWatchStatus(userId, anilistId, status);
   revalidatePath(`/watchlist/${anilistId}`);
 }

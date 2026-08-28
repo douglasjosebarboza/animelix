@@ -6,6 +6,7 @@ import {
   markEpisodeAction,
   undoLastAction,
   removeFromWatchlistAction,
+  setWatchStatusAction,
 } from "@/lib/watchlist-actions";
 
 function fmtDate(d: Date): string {
@@ -49,6 +50,9 @@ export default async function WatchEntryPage({
                 ? ` · último: S${progress.last.season}E${progress.last.episode} em ${fmtDate(progress.last.watchedAt)}`
                 : ""}
             </p>
+            <p className="mt-1 text-xs text-neutral-500">
+              Status: <span className="text-neutral-300">{entry.status}</span>
+            </p>
           </div>
           <div className="flex shrink-0 gap-2">
             <form action={undoLastAction}>
@@ -70,6 +74,24 @@ export default async function WatchEntryPage({
               </button>
             </form>
           </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-neutral-500">Mudar status:</span>
+          {(["plan_to_watch", "watching", "completed", "paused", "dropped"] as const).map(
+            (s) => (
+              <form key={s} action={setWatchStatusAction}>
+                <input type="hidden" name="anilistId" value={anilistId} />
+                <input type="hidden" name="status" value={s} />
+                <button
+                  type="submit"
+                  className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 hover:bg-neutral-900"
+                >
+                  {s}
+                </button>
+              </form>
+            ),
+          )}
         </div>
 
         {total == null ? (
