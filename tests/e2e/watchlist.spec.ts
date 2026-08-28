@@ -30,13 +30,13 @@ test("add to watchlist -> mark -> undo -> mark again", async ({ page }) => {
   // Mark episode 1
   const firstMark = page.getByRole("button", { name: "Marcar" }).first();
   await firstMark.click();
-  await expect(page.getByText(/assistido/)).toBeVisible();
+  await expect(page.getByText(/assistido:/)).toBeVisible();
 
   // Undo last
   await page.getByRole("button", { name: /undo last/i }).click();
-  await expect(page.getByText(/assistido/)).toHaveCount(0);
+  await expect(page.getByText(/assistido:/)).toHaveCount(0);
 
   // Mark again
   await page.getByRole("button", { name: "Marcar" }).first().click();
-  await expect(page.getByText(/assistido/)).toBeVisible();
+  await expect(page.getByText(/assistido:/)).toBeVisible();
 });
