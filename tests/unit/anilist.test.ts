@@ -12,7 +12,6 @@ function media(id: number, title: string) {
     title: { romaji: title, english: title, native: title },
     coverImage: { large: `https://img/${id}.jpg` },
     episodes: 12,
-    seasons: 1,
   };
 }
 
@@ -64,7 +63,7 @@ describe("AniList client", () => {
       title: "Frieren",
       coverImageUrl: "https://img/1.jpg",
       episodeCount: 12,
-      seasonCount: 1,
+      seasonCount: null,
     });
   });
 

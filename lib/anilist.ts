@@ -25,7 +25,6 @@ type RawMedia = {
   title: { romaji?: string; english?: string; native?: string };
   coverImage?: { large?: string } | null;
   episodes?: number | null;
-  seasons?: number | null;
 };
 
 function pickTitle(title: RawMedia["title"]): string {
@@ -33,12 +32,14 @@ function pickTitle(title: RawMedia["title"]): string {
 }
 
 function mapMedia(m: RawMedia): AnimeSeed {
+  // AniList does not expose a season count on Media (only `season`/`seasonYear`),
+  // so seasonCount is left null for now.
   return {
     anilistId: m.id,
     title: pickTitle(m.title),
     coverImageUrl: m.coverImage?.large ?? null,
     episodeCount: m.episodes ?? null,
-    seasonCount: m.seasons ?? null,
+    seasonCount: null,
   };
 }
 
@@ -99,7 +100,6 @@ const SEARCH_QUERY = `
         title { romaji english native }
         coverImage { large }
         episodes
-        seasons
       }
     }
   }
@@ -112,7 +112,6 @@ const BY_ID_QUERY = `
       title { romaji english native }
       coverImage { large }
       episodes
-      seasons
     }
   }
 `;
