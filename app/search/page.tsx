@@ -46,7 +46,7 @@ export default async function SearchPage({
         </form>
 
         {error && (
-          <p className="mt-4 rounded-md border border-amber-700 bg-amber-950 p-3 text-sm text-amber-300">
+          <p className="mt-4 rounded-md border border-red-700 bg-red-900 p-3 text-sm text-red-300">
             {error}
           </p>
         )}
