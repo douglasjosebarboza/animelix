@@ -1,4 +1,4 @@
-import { requireUser, signOut } from "@/auth";
+import { requireUser } from "@/auth";
 import { listWatchEntries } from "@/lib/watchlist";
 import { removeFromWatchlistAction, deleteAccountAction } from "@/lib/watchlist-actions";
 
@@ -39,19 +39,6 @@ export default async function WatchlistPage() {
               Logado como {user.email}
             </p>
           </div>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/login" });
-            }}
-          >
-            <button
-              type="submit"
-              className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-900"
-            >
-              Sair
-            </button>
-          </form>
           <form action={deleteAccountAction}>
             <button
               type="submit"

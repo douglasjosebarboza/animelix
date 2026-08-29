@@ -2,11 +2,12 @@ import { test, expect } from "@playwright/test";
 
 test("logged-out users see Home/Buscar/Entrar/Registrar and no Perfil", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Home" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Buscar" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Entrar" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Registrar" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Perfil" })).toHaveCount(0);
+  // The logo is the only home entry point; no separate "Home" link.
+  await expect(page.getByRole("link", { name: "Home" })).toHaveCount(0);
 });
 
 test("nav is hidden on login and register pages", async ({ page }) => {
