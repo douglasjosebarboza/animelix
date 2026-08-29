@@ -17,7 +17,7 @@ One instalment of an Anime, addressed by season number and episode number. May o
 _Avoid_: chapter, instalment
 
 **WatchEntry**:
-The link between a User and an Anime. Carries the User's current progress on that Anime: status, last episode watched, and notes.
+The link between a User and an Anime. Carries the User's current progress on that Anime: status and last episode watched.
 _Avoid_: watch record, progress entry, log
 
 **WatchStatus**:

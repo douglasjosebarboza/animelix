@@ -155,3 +155,41 @@ test("paused entry resumes to watching when a new episode is marked", async ({
   await expect(page.getByText(/assistido:/)).toBeVisible();
   await expect(page.locator("p", { hasText: "Status:" })).toContainText("watching");
 });
+
+test("watchlist groups entries by status", async ({ page }) => {
+  const e2eEmail = `e2e+${Date.now()}@animelix.test`;
+  const e2ePassword = "supersecret123";
+
+  await page.goto("/register");
+  await page.getByLabel("Email").fill(e2eEmail);
+  await page.getByLabel("Senha").fill(e2ePassword);
+  await page.getByRole("button", { name: /cadastrar/i }).click();
+  await expect(page).toHaveURL(/\/login/);
+
+  await page.getByLabel("Email").fill(e2eEmail);
+  await page.getByLabel("Senha").fill(e2ePassword);
+  await page.getByRole("button", { name: /entrar/i }).click();
+  await expect(page).toHaveURL(/\/watchlist/);
+
+  await page.goto("/search?q=frieren");
+  await expect(page.getByText(/resultado/i)).toBeVisible();
+  await page.getByRole("button", { name: "Adicionar" }).first().click();
+  await expect(page).toHaveURL(/\/anime\/\d+/);
+  await page.getByRole("button", { name: /add to watchlist/i }).click();
+  await expect(page).toHaveURL(/\/watchlist\/\d+/);
+
+  // New entry starts as plan_to_watch.
+  await expect(page.getByText(/Status: plan_to_watch/)).toBeVisible();
+
+  // Mark an episode; the entry moves to "watching".
+  await page.getByRole("button", { name: "marcar episódio 1", exact: true }).click();
+  await expect(page.getByText(/Status: watching/)).toBeVisible();
+
+  // On the watchlist it is grouped under "Assistindo", and the now-empty
+  // "Planejar assistir" group does not render.
+  await page.goto("/watchlist");
+  await expect(page.getByRole("heading", { name: /Assistindo/ })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Planejar assistir/ }),
+  ).toHaveCount(0);
+});
