@@ -19,9 +19,9 @@ export default async function HomePage({
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 p-8 text-neutral-100">
+    <main className="min-h-screen bg-background p-8 text-foreground">
       <div className="mx-auto max-w-5xl">
-        <h1 className="text-2xl font-semibold">Temporada atual</h1>
+        <h1 className="text-3xl font-bold text-gradient">Temporada atual</h1>
         <p className="mt-1 text-sm text-neutral-400">
           Animes da temporada, do mais bem avaliado ao menos.
         </p>
@@ -32,7 +32,7 @@ export default async function HomePage({
             <select
               name="genre"
               defaultValue={validGenre ?? ""}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+              className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
             >
               <option value="">Todos</option>
               {ANILIST_GENRES.map((g) => (
@@ -44,12 +44,12 @@ export default async function HomePage({
           </label>
           <button
             type="submit"
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500"
+            className="btn-anime rounded-md px-4 py-2 text-sm font-medium"
           >
             Filtrar
           </button>
           {validGenre && (
-            <a href="/" className="text-sm text-emerald-400 hover:underline">
+            <a href="/" className="text-sm text-accent hover:underline">
               Limpar
             </a>
           )}
@@ -69,7 +69,7 @@ export default async function HomePage({
           {results.map((anime) => (
             <li
               key={anime.anilistId}
-              className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900"
+              className="group overflow-hidden rounded-2xl border border-border bg-surface transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/20"
             >
               {anime.coverImageUrl && (
                 <img
@@ -79,8 +79,8 @@ export default async function HomePage({
                 />
               )}
               <div className="p-3">
-                <p className="line-clamp-2 text-sm font-medium">{anime.title}</p>
-                <p className="mt-1 text-xs text-amber-400">
+                <p className="line-clamp-2 text-sm font-medium text-foreground">{anime.title}</p>
+                <p className="mt-1 text-xs text-accent">
                   {anime.averageScore != null
                     ? `★ ${(anime.averageScore / 10).toFixed(1)}`
                     : "—"}
@@ -89,7 +89,7 @@ export default async function HomePage({
                   {anime.genres.slice(0, 3).map((g) => (
                     <span
                       key={g}
-                      className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-300"
+                      className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-muted"
                     >
                       {g}
                     </span>
@@ -97,7 +97,7 @@ export default async function HomePage({
                 </div>
                 <a
                   href={`/anime/${anime.anilistId}`}
-                  className="mt-3 block w-full rounded-md bg-emerald-700 px-2 py-1.5 text-center text-xs font-medium hover:bg-emerald-600"
+                  className="btn-anime mt-3 block w-full rounded-md px-2 py-1.5 text-center text-xs font-medium"
                 >
                   Adicionar
                 </a>
