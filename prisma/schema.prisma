@@ -74,5 +74,5 @@ model EpisodeWatch {
 
   watchEntry  WatchEntry @relation(fields: [watchEntryId], references: [id], onDelete: Cascade)
 
-  @@index([watchEntryId, season, episode])
+  @@unique([watchEntryId, season, episode])
 }

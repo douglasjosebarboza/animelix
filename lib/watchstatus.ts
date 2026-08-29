@@ -12,6 +12,11 @@ export type EngineAction =
       total: number | null;
       firstWatch: boolean;
     }
+  | {
+      type: "removeEpisode";
+      distinctWatched: number;
+      total: number | null;
+    }
   | { type: "timeTick"; daysSinceLastWatch: number; autoPauseEnabled: boolean }
   | { type: "setStatus"; to: WatchStatus };
 
@@ -44,6 +49,21 @@ export function computeNextStatus(
         if (action.total != null && action.distinctWatched >= action.total) {
           return { from: current, to: "completed", reason: "auto_completed" };
         }
+        return { from: current, to: "watching", reason: "user_status_change" };
+      }
+      return null;
+    }
+
+    case "removeEpisode": {
+      // Removing an episode can only take an entry out of `completed` (back to
+      // `watching`) when the watched set is no longer complete. Other statuses
+      // are unaffected; removing the last episode is handled by the caller
+      // (the WatchEntry is dropped entirely).
+      if (
+        current === "completed" &&
+        action.total != null &&
+        action.distinctWatched < action.total
+      ) {
         return { from: current, to: "watching", reason: "user_status_change" };
       }
       return null;

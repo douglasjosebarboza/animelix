@@ -21,6 +21,14 @@ function distinctCount(entry: EntryWithRelations): number {
   return set.size;
 }
 
+function findEpisodeWatch(
+  watches: { id: string; season: number; episode: number }[],
+  season: number,
+  episode: number,
+) {
+  return watches.find((e) => e.season === season && e.episode === episode);
+}
+
 function maxWatchedAt(entry: EntryWithRelations): Date | null {
   return entry.episodeWatches.reduce<Date | null>(
     (max, e) => (!max || e.watchedAt > max ? e.watchedAt : max),
@@ -125,7 +133,13 @@ export async function markEpisodeWatched(
   }
   const firstWatch = before.episodeWatches.length === 0;
 
-  // Re-watch is allowed: always insert a new EpisodeWatch.
+  // An episode is a set membership: it can only be watched once. The unique
+  // constraint is the backstop; this guard gives a clean error up front.
+  const alreadyWatched = findEpisodeWatch(before.episodeWatches, season, episode);
+  if (alreadyWatched) {
+    throw new WatchlistError("Episódio já assistido");
+  }
+
   await prisma.episodeWatch.create({
     data: { watchEntryId: before.id, season, episode, watchedAt },
   });
@@ -228,31 +242,47 @@ export async function runAutoPauseJob(now: Date = new Date()): Promise<number> {
   return paused;
 }
 
-export async function undoLastEpisodeWatch(
+export async function removeEpisodeWatch(
   userId: string,
   anilistId: number,
-): Promise<void> {
+  season: number,
+  episode: number,
+): Promise<boolean> {
   const animeId = await resolveAnimeId(anilistId);
   const entry = await prisma.watchEntry.findUnique({
     where: { userId_animeId: { userId, animeId } },
+    include: { anime: true, episodeWatches: true },
   });
-  if (!entry) return;
+  if (!entry) {
+    throw new WatchlistError("Anime não está na sua watchlist");
+  }
+  const target = findEpisodeWatch(entry.episodeWatches, season, episode);
+  if (!target) return false;
 
-  const latest = await prisma.episodeWatch.findFirst({
-    where: { watchEntryId: entry.id },
-    orderBy: [{ watchedAt: "desc" }, { createdAt: "desc" }],
-  });
-  if (!latest) return;
-  await prisma.episodeWatch.delete({ where: { id: latest.id } });
+  await prisma.episodeWatch.delete({ where: { id: target.id } });
 
-  // Undoing the last watched episode leaves nothing tracked: drop the entry
+  // Removing the last watched episode leaves nothing tracked: drop the entry
   // from the watchlist entirely.
   const remaining = await prisma.episodeWatch.count({
     where: { watchEntryId: entry.id },
   });
   if (remaining === 0) {
     await prisma.watchEntry.delete({ where: { id: entry.id } });
+    return true;
   }
+
+  // Compute the post-removal state in memory: with the watched set there can be
+  // no duplicates, so the remaining row count equals the distinct count.
+  const remainingWatches = entry.episodeWatches.filter((e) => e.id !== target.id);
+  const transition = computeNextStatus(entry.status as WatchStatus, {
+    type: "removeEpisode",
+    distinctWatched: distinctCount({ ...entry, episodeWatches: remainingWatches }),
+    total: entry.anime.episodeCount,
+  });
+  if (transition) {
+    await applyTransition(entry.id, entry.status as WatchStatus, transition);
+  }
+  return false;
 }
 
 export async function listWatchEntries(userId: string) {

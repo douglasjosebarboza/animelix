@@ -9,6 +9,9 @@ const tick = (daysSinceLastWatch: number, autoPauseEnabled = true) =>
 
 const set = (to: WatchStatus) => ({ type: "setStatus", to }) as const;
 
+const remove = (distinctWatched: number, total: number | null) =>
+  ({ type: "removeEpisode", distinctWatched, total }) as const;
+
 describe("computeNextStatus — markEpisode", () => {
   it("plan_to_watch + first watch → watching (user_status_change)", () => {
     expect(computeNextStatus("plan_to_watch", mark(1, 12, true))).toEqual({
@@ -128,5 +131,36 @@ describe("computeNextStatus — setStatus (manual)", () => {
 
   it("same status → no transition", () => {
     expect(computeNextStatus("watching", set("watching"))).toBeNull();
+  });
+});
+
+describe("computeNextStatus — removeEpisode", () => {
+  it("completed + becomes incomplete → watching (user_status_change)", () => {
+    expect(computeNextStatus("completed", remove(11, 12))).toEqual({
+      from: "completed",
+      to: "watching",
+      reason: "user_status_change",
+    });
+  });
+
+  it("completed + null total stays completed (cannot detect incompleteness)", () => {
+    expect(computeNextStatus("completed", remove(11, null))).toBeNull();
+  });
+
+  it("watching + remove keeps watching", () => {
+    expect(computeNextStatus("watching", remove(4, 12))).toBeNull();
+  });
+
+  it("paused + remove keeps paused", () => {
+    expect(computeNextStatus("paused", remove(2, 12))).toBeNull();
+  });
+
+  it("dropped + remove keeps dropped", () => {
+    expect(computeNextStatus("dropped", remove(3, 12))).toBeNull();
+  });
+
+  it("engine never produces dropped on remove", () => {
+    const t = computeNextStatus("completed", remove(5, 12));
+    expect(t?.to).not.toBe("dropped");
   });
 });

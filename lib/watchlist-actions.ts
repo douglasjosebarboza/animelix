@@ -9,7 +9,7 @@ import {
   addToWatchlist,
   removeFromWatchlist,
   markEpisodeWatched,
-  undoLastEpisodeWatch,
+  removeEpisodeWatch,
   setWatchStatus,
   setAutoPause,
   WatchlistError,
@@ -54,14 +54,27 @@ export async function markEpisodeAction(formData: FormData): Promise<void> {
   const episode = Number(formData.get("episode"));
   const dateStr = String(formData.get("watchedAt") ?? "");
   const watchedAt = dateStr ? new Date(dateStr) : new Date();
-  await markEpisodeWatched(userId, anilistId, season, episode, watchedAt);
+  try {
+    await markEpisodeWatched(userId, anilistId, season, episode, watchedAt);
+  } catch (err) {
+    if (err instanceof WatchlistError) {
+      redirect(`/watchlist/${anilistId}?error=${encodeURIComponent(err.message)}`);
+    }
+    throw err;
+  }
   revalidatePath(`/watchlist/${anilistId}`);
 }
 
-export async function undoLastAction(formData: FormData): Promise<void> {
+export async function removeEpisodeAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const anilistId = Number(formData.get("anilistId"));
-  await undoLastEpisodeWatch(userId, anilistId);
+  const season = Number(formData.get("season"));
+  const episode = Number(formData.get("episode"));
+  const entryRemoved = await removeEpisodeWatch(userId, anilistId, season, episode);
+  // Removing the last watched episode deletes the entry; sending the user back
+  // to the watchlist avoids re-rendering the now-deleted entry page (which would
+  // surface notFound() as an error during the action's revalidation).
+  if (entryRemoved) redirect("/watchlist");
   revalidatePath(`/watchlist/${anilistId}`);
 }
 
