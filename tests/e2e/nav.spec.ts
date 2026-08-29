@@ -9,6 +9,14 @@ test("logged-out users see Home/Buscar/Entrar/Registrar and no Perfil", async ({
   await expect(page.getByRole("link", { name: "Perfil" })).toHaveCount(0);
 });
 
+test("nav is hidden on login and register pages", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page.getByRole("link", { name: "Animelix" })).toHaveCount(0);
+
+  await page.goto("/register");
+  await expect(page.getByRole("link", { name: "Animelix" })).toHaveCount(0);
+});
+
 test("logged-in users see Perfil and Sair, and Sair logs them out", async ({ page }) => {
   const email = `e2e+${Date.now()}@animelix.test`;
   const password = "supersecret123";
