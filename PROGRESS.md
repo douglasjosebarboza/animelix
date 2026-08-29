@@ -27,7 +27,7 @@ Tickets GitHub (`douglasjosebarboza/animelix`):
   (reason `user_status_change`) quando fica incompleto; demais status inalterados.
 - Remover o último ep **apaga a WatchEntry** (idêntico ao comportamento anterior do undo).
 - ADR `docs/adr/0004-episodewatch-watched-set.md`. `CONTEXT.md` atualizado (EpisodeWatch).
-- `distinctCount` == rowCount agora (sem re-watch). Testes: +6 unit (61), build verde, e2e 11.
+- `distinctCount` == rowCount agora (sem re-watch). Testes: +5 unit (60; o caso "re-watch" era redundante com "not all watched" e foi removido), build verde, e2e 12.
 
 ## Code review (#8) — correções aplicadas (29/08/2026)
 - `prisma/schema.prisma`: removido `@@index([watchEntryId, season, episode])` redundante
@@ -39,7 +39,7 @@ Tickets GitHub (`douglasjosebarboza/animelix`):
   `/watchlist/{id}?error=...` (Story 5: erro amigável "Episódio já assistido" em vez de erro
   não tratado de server action).
 - `app/watchlist/[animeId]/page.tsx`: lê `searchParams.error` e mostra banner de erro.
-- Validação final: unit 61, build verde, e2e 12. Committed.
+- Validação final: unit 60 (removido teste redundante de re-watch), build verde, e2e 12. Committed.
 
 Dependências nativas de issue NÃO funcionam no Free plan do GitHub (422) — blockers estão como texto no body.
 
