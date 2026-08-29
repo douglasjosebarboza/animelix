@@ -70,7 +70,7 @@ test("activity feed is private to each user", async ({ page }) => {
 
   // Sign out, sign in as User B
   await page.goto("/watchlist");
-  await page.getByRole("button", { name: "Sair" }).click();
+  await page.locator("main").getByRole("button", { name: "Sair" }).click();
   await expect(page).toHaveURL(/\/login/);
   await signUp(page, bEmail);
 

@@ -28,7 +28,7 @@ test("cross-user cannot access another user's watchlist entry (404)", async ({ p
 
   // User A signs out
   await page.goto("/watchlist");
-  await page.getByRole("button", { name: "Sair" }).click();
+  await page.locator("main").getByRole("button", { name: "Sair" }).click();
   await expect(page).toHaveURL(/\/login/);
 
   // User B logs in and tries to open A's entry -> must 404, not reveal it
