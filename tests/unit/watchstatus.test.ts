@@ -29,10 +29,6 @@ describe("computeNextStatus — markEpisode", () => {
     expect(computeNextStatus("watching", mark(5, 12))).toBeNull();
   });
 
-  it("watching + re-watch of same episode does not complete early", () => {
-    expect(computeNextStatus("watching", mark(5, 12))).toBeNull();
-  });
-
   it("watching + all distinct watched → completed (auto_completed)", () => {
     expect(computeNextStatus("watching", mark(12, 12))).toEqual({
       from: "watching",
