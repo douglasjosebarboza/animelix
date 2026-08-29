@@ -1,5 +1,13 @@
 import { Prisma, type Anime } from "@prisma/client";
-import { getAnimeById, searchAnime as anilistSearch, type AnimeSeed } from "@/lib/anilist";
+import {
+  getAnimeById,
+  searchAnime as anilistSearch,
+  getSeasonalAnime as anilistSeasonal,
+  currentSeason,
+  type AnimeSeed,
+  type SeasonalAnime,
+  type SeasonRef,
+} from "@/lib/anilist";
 import { prisma } from "@/lib/prisma";
 import { logEvent } from "@/lib/logger";
 
@@ -31,6 +39,13 @@ async function upsertSeed(seed: AnimeSeed): Promise<Anime> {
 export async function searchAnime(query: string): Promise<AnimeSeed[]> {
   return anilistSearch(query);
 }
+
+export async function getSeasonalAnime(genre?: string): Promise<SeasonalAnime[]> {
+  const { season, year } = currentSeason();
+  return anilistSeasonal({ season, seasonYear: year, genre });
+}
+
+export type { SeasonRef, SeasonalAnime };
 
 export async function refreshAnime(anilistId: number): Promise<Anime> {
   logEvent("anilist_refresh", { anilistId, trigger: "manual" });
