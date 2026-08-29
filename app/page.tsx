@@ -22,12 +22,12 @@ export default async function HomePage({
     <main className="min-h-screen bg-background p-8 text-foreground">
       <div className="mx-auto max-w-5xl">
         <h1 className="text-3xl font-bold text-gradient">Temporada atual</h1>
-        <p className="mt-1 text-sm text-neutral-400">
+        <p className="mt-1 text-sm text-muted">
           Animes da temporada, do mais bem avaliado ao menos.
         </p>
 
         <form className="mt-4 flex flex-wrap items-end gap-2" method="get" action="/">
-          <label className="flex flex-col gap-1 text-xs text-neutral-400">
+          <label className="flex flex-col gap-1 text-xs text-muted">
             Gênero
             <select
               name="genre"
@@ -62,7 +62,7 @@ export default async function HomePage({
         )}
 
         {!error && (
-          <p className="mt-4 text-sm text-neutral-400">{results.length} anime(s) nesta temporada</p>
+          <p className="mt-4 text-sm text-muted">{results.length} anime(s) nesta temporada</p>
         )}
 
         <ul className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
