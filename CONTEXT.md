@@ -25,8 +25,8 @@ The User's relationship to an Anime at the current moment: `watching`, `complete
 _Avoid_: state, mode, flag
 
 **EpisodeWatch**:
-A record that a User watched one specific Episode of an Anime on a specific date. Multiple EpisodeWatch entries for the same Episode are allowed (re-watches of the same ep).
-_Avoid_: view, watch log, play
+A record that a User watched one specific Episode of an Anime on a specific date. Each (WatchEntry, season, episode) combination can have at most one EpisodeWatch — an Episode is a membership in the watched set, not a viewing log, so re-watches of the same Episode are not tracked.
+_Avoid_: view, watch log, play, re-watch
 
 **StatusTransition**:
 A logged change to a WatchEntry's WatchStatus. Includes the reason (`auto_completed`, `auto_paused`, `user_dropped`, `user_status_change`) and the timestamp. Visible to the User as an activity feed entry; silent at the moment of change.
