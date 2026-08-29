@@ -60,7 +60,7 @@ export function AuthForm({ mode, action }: Props) {
           {pending ? "Aguarde..." : isLogin ? "Entrar" : "Cadastrar"}
         </button>
 
-        <p className="text-center text-sm text-neutral-400">
+        <p className="text-center text-sm text-muted">
           {isLogin ? (
             <>
               Não tem conta?{" "}
