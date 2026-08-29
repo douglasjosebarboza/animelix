@@ -39,17 +39,17 @@ export default async function ActivityPage() {
   });
 
   return (
-    <main className="min-h-screen bg-neutral-950 p-8 text-neutral-100">
+    <main className="min-h-screen bg-background p-8 text-foreground">
       <div className="mx-auto max-w-2xl">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Atividade</h1>
-          <a href="/watchlist" className="text-sm text-emerald-400">
+          <h1 className="text-2xl font-bold text-gradient">Atividade</h1>
+          <a href="/watchlist" className="text-sm text-accent hover:underline">
             ← Minha watchlist
           </a>
         </div>
 
         {transitions.length === 0 ? (
-          <p className="mt-8 rounded-md border border-neutral-800 p-4 text-sm text-neutral-400">
+          <p className="mt-8 rounded-md border border-border p-4 text-sm text-muted">
             Nenhuma transição de status ainda.
           </p>
         ) : (
@@ -57,7 +57,7 @@ export default async function ActivityPage() {
             {transitions.map((t) => (
               <li
                 key={t.id}
-                className="flex items-center gap-4 rounded-lg border border-neutral-800 p-3"
+                className="flex items-center gap-4 rounded-xl border border-border bg-surface p-3"
               >
                 {t.watchEntry.anime.coverImageUrl && (
                   <img
@@ -70,16 +70,16 @@ export default async function ActivityPage() {
                   <p className="truncate text-sm font-medium">
                     {t.watchEntry.anime.title}
                   </p>
-                  <p className="mt-1 text-xs text-neutral-400">
-                    <span className="text-neutral-300">
+                  <p className="mt-1 text-xs text-muted">
+                    <span className="text-foreground">
                       {STATUS_LABEL[t.fromStatus as WatchStatus] ?? t.fromStatus}
                     </span>{" "}
                     →{" "}
-                    <span className="text-neutral-300">
+                    <span className="text-foreground">
                       {STATUS_LABEL[t.toStatus as WatchStatus] ?? t.toStatus}
                     </span>
                   </p>
-                  <p className="mt-0.5 text-xs text-neutral-500">
+                  <p className="mt-0.5 text-xs text-muted">
                     {REASON_LABEL[t.reason] ?? t.reason} ·{" "}
                     {relativeTime(t.occurredAt)}
                   </p>
