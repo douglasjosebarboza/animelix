@@ -38,7 +38,6 @@ model WatchEntry {
   lastEpisodeSeason Int?
   lastEpisodeNumber Int?
   lastWatchedAt    DateTime?
-  notes            String?
   autoPauseEnabled Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
