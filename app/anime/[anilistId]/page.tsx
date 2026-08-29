@@ -91,7 +91,7 @@ export default async function AnimePage({
             {entry ? (
               <a
                 href={`/watchlist/${anilistId}`}
-                className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium hover:bg-emerald-600"
+                className="btn-anime rounded-md px-4 py-2 text-sm font-medium"
               >
                 Ver na watchlist
               </a>
