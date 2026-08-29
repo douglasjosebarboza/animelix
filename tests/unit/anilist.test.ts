@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as http from "node:http";
-import { searchAnime, getAnimeById, AnilistError } from "@/lib/anilist";
+import {
+  searchAnime,
+  getAnimeById,
+  getSeasonalAnime,
+  currentSeason,
+  AnilistError,
+  type SeasonRef,
+} from "@/lib/anilist";
 
 let server: http.Server;
 let stubUrl: string;
@@ -12,6 +19,14 @@ function media(id: number, title: string) {
     title: { romaji: title, english: title, native: title },
     coverImage: { large: `https://img/${id}.jpg` },
     episodes: 12,
+  };
+}
+
+function seasonalMedia(id: number, title: string, averageScore: number | null, genres: string[]) {
+  return {
+    ...media(id, title),
+    averageScore,
+    genres,
   };
 }
 
@@ -35,6 +50,16 @@ beforeAll(async () => {
         }
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ data: { Media: media(parsed.variables.id, `Anime ${parsed.variables.id}`) } }));
+      } else if (parsed.query.includes("Seasonal")) {
+        const genre = parsed.variables.genre;
+        const filtered =
+          genre == null
+            ? [seasonalMedia(10, "Frieren", 84, ["Drama", "Adventure"]), seasonalMedia(11, "Naruto", 70, ["Action"])]
+            : [seasonalMedia(10, "Frieren", 84, ["Drama", "Adventure"]), seasonalMedia(11, "Naruto", 70, ["Action"])].filter(
+                (m) => m.genres.some((g: string) => genre.includes(g)),
+              );
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ data: { Page: { media: filtered } } }));
       } else {
         res.statusCode = 500;
         res.end("boom");
@@ -104,5 +129,48 @@ describe("AniList client", () => {
 
   it("throws AnilistError when the API returns 500", async () => {
     await expect(getAnimeById(0)).rejects.toBeInstanceOf(AnilistError);
+  });
+
+  describe("currentSeason", () => {
+    it("maps months to the correct AniList season", () => {
+      const cases: [string, SeasonRef][] = [
+        ["2026-01-15", { season: "WINTER", year: 2026 }],
+        ["2026-04-15", { season: "SPRING", year: 2026 }],
+        ["2026-07-15", { season: "SUMMER", year: 2026 }],
+        ["2026-11-15", { season: "FALL", year: 2026 }],
+      ];
+      for (const [iso, expected] of cases) {
+        expect(currentSeason(new Date(iso))).toEqual(expected);
+      }
+    });
+
+    it("keeps the year stable across the winter boundary (Jan-Mar)", () => {
+      expect(currentSeason(new Date("2026-03-31"))).toEqual({ season: "WINTER", year: 2026 });
+    });
+  });
+
+  describe("getSeasonalAnime", () => {
+    it("maps seasonal results with score and genres", async () => {
+      const results = await getSeasonalAnime({ season: "FALL", seasonYear: 2026 });
+      expect(results[0]).toMatchObject({
+        anilistId: 10,
+        title: "Frieren",
+        coverImageUrl: "https://img/10.jpg",
+        averageScore: 84,
+        genres: ["Drama", "Adventure"],
+      });
+      expect(results[0].episodeCount).toBe(12);
+    });
+
+    it("passes the genre filter to AniList when provided", async () => {
+      const results = await getSeasonalAnime({ season: "FALL", seasonYear: 2026, genre: "Action" });
+      expect(results).toHaveLength(1);
+      expect(results[0].title).toBe("Naruto");
+    });
+
+    it("defaults to an empty genres array when the API omits it", async () => {
+      const data = await getSeasonalAnime({ season: "FALL", seasonYear: 2026 });
+      expect(Array.isArray(data[0].genres)).toBe(true);
+    });
   });
 });
