@@ -52,13 +52,13 @@ export default async function WatchlistPage() {
         <div className="mt-6 flex gap-4">
           <a
             href="/search"
-            className="text-sm text-emerald-400 hover:underline"
+            className="text-sm text-accent hover:underline"
           >
             + Buscar animes na AniList
           </a>
           <a
             href="/activity"
-            className="text-sm text-emerald-400 hover:underline"
+            className="text-sm text-accent hover:underline"
           >
             Ver atividade
           </a>
@@ -81,7 +81,7 @@ export default async function WatchlistPage() {
                       <li key={entry.id} className="flex items-center justify-between gap-4 p-3">
                         <a
                           href={`/watchlist/${entry.anime.anilistId}`}
-                          className="flex items-center gap-3 hover:text-emerald-400"
+                          className="flex items-center gap-3 hover:text-accent"
                         >
                           {entry.anime.coverImageUrl && (
                             <img
