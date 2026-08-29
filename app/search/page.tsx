@@ -26,20 +26,20 @@ export default async function SearchPage({
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 p-8 text-neutral-100">
+    <main className="min-h-screen bg-background p-8 text-foreground">
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-semibold">Buscar Anime</h1>
+        <h1 className="text-3xl font-bold text-gradient">Buscar Anime</h1>
 
         <form className="mt-4 flex gap-2" method="get" action="/search">
           <input
             name="q"
             defaultValue={q ?? ""}
             placeholder="Título do anime..."
-            className="flex-1 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
+            className="flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
           />
           <button
             type="submit"
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500"
+            className="btn-anime rounded-md px-4 py-2 text-sm font-medium"
           >
             Buscar
           </button>
@@ -52,7 +52,7 @@ export default async function SearchPage({
         )}
 
         {q && !error && (
-          <p className="mt-4 text-sm text-neutral-400">
+          <p className="mt-4 text-sm text-muted">
             {results.length} resultado(s) para &quot;{q}&quot;
           </p>
         )}
@@ -61,7 +61,7 @@ export default async function SearchPage({
           {results.map((anime) => (
             <li
               key={anime.anilistId}
-              className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900"
+              className="group overflow-hidden rounded-2xl border border-border bg-surface transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/20"
             >
               {anime.coverImageUrl && (
                 <img
@@ -72,7 +72,7 @@ export default async function SearchPage({
               )}
               <div className="p-3">
                 <p className="line-clamp-2 text-sm font-medium">{anime.title}</p>
-                <p className="mt-1 text-xs text-neutral-500">
+                <p className="mt-1 text-xs text-muted">
                   {anime.episodeCount ?? "?"} eps
                   {anime.seasonCount ? ` · ${anime.seasonCount} temp` : ""}
                 </p>
@@ -80,7 +80,7 @@ export default async function SearchPage({
                   <input type="hidden" name="anilistId" value={anime.anilistId} />
                   <button
                     type="submit"
-                    className="w-full rounded-md bg-emerald-700 px-2 py-1.5 text-xs font-medium hover:bg-emerald-600"
+                    className="btn-anime w-full rounded-md px-2 py-1.5 text-xs font-medium"
                   >
                     Adicionar
                   </button>
