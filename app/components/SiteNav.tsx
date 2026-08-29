@@ -1,8 +1,13 @@
-import { auth, signOut } from "@/auth";
+"use client";
 
-export default async function SiteNav() {
-  const session = await auth();
-  const loggedIn = !!session?.user?.id;
+import { usePathname } from "next/navigation";
+import { signOutAction } from "@/lib/auth-actions";
+
+const HIDDEN_PATHS = new Set(["/login", "/register"]);
+
+export default function SiteNav({ loggedIn }: { loggedIn: boolean }) {
+  const pathname = usePathname();
+  if (HIDDEN_PATHS.has(pathname)) return null;
 
   return (
     <nav className="border-b border-neutral-800 bg-neutral-950 px-6 py-3 text-sm text-neutral-100">
@@ -22,12 +27,7 @@ export default async function SiteNav() {
               <a href="/watchlist" className="text-neutral-300 hover:text-white">
                 Perfil
               </a>
-              <form
-                action={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/" });
-                }}
-              >
+              <form action={signOutAction}>
                 <button type="submit" className="text-neutral-300 hover:text-white">
                   Sair
                 </button>
