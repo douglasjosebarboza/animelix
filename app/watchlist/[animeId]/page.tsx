@@ -42,7 +42,7 @@ export default async function WatchEntryPage({
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 p-8 text-neutral-100">
+    <main className="min-h-screen bg-background p-8 text-foreground">
         <div className="mx-auto max-w-2xl">
           {error && (
             <p className="mb-4 rounded-md border border-amber-700 bg-amber-950 p-3 text-sm text-amber-300">
@@ -51,15 +51,15 @@ export default async function WatchEntryPage({
           )}
           <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">{entry.anime.title}</h1>
-            <p className="mt-1 text-sm text-neutral-400">
+            <h1 className="text-2xl font-bold text-gradient">{entry.anime.title}</h1>
+            <p className="mt-1 text-sm text-muted">
               {progress.watchedCount} de {total ?? "?"} episódios assistidos
               {progress.last
                 ? ` · último: S${progress.last.season}E${progress.last.episode} em ${fmtDate(progress.last.watchedAt)}`
                 : ""}
             </p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Status: <span className="text-neutral-300">{entry.status}</span>
+            <p className="mt-1 text-xs text-muted">
+              Status: <span className="text-muted">{entry.status}</span>
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
@@ -76,7 +76,7 @@ export default async function WatchEntryPage({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-neutral-500">Mudar status:</span>
+          <span className="text-xs text-muted">Mudar status:</span>
           {(["plan_to_watch", "watching", "completed", "paused", "dropped"] as const).map(
             (s) => (
               <form key={s} action={setWatchStatusAction}>
@@ -84,7 +84,11 @@ export default async function WatchEntryPage({
                 <input type="hidden" name="status" value={s} />
                 <button
                   type="submit"
-                  className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 hover:bg-neutral-900"
+                  className={
+                    s === entry.status
+                      ? "btn-anime rounded-md px-2.5 py-1 text-xs"
+                      : "btn-ghost rounded-md px-2.5 py-1 text-xs"
+                  }
                 >
                   {s}
                 </button>
@@ -98,7 +102,7 @@ export default async function WatchEntryPage({
             Total de episódios indisponível na AniList para este título.
           </p>
         ) : (
-          <ul className="mt-6 divide-y divide-neutral-800 rounded-lg border border-neutral-800">
+          <ul className="mt-6 divide-y divide-border rounded-lg border border-border">
             {Array.from({ length: total }, (_, i) => i + 1).map((ep) => {
               const dates = watchedByEpisode.get(ep) ?? [];
               const watched = dates.length > 0;
@@ -107,7 +111,7 @@ export default async function WatchEntryPage({
                   <div className="text-sm">
                     <span className="font-medium">Episódio {ep}</span>
                     {watched && (
-                      <span className="ml-2 text-xs text-emerald-400">
+                      <span className="ml-2 text-xs text-accent">
                         assistido: {dates.map(fmtDate).join(", ")}
                       </span>
                     )}
@@ -120,7 +124,7 @@ export default async function WatchEntryPage({
                       <button
                         type="submit"
                         aria-label={`remover episódio ${ep}`}
-                        className="rounded-md border border-red-800 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-950"
+                        className="btn-ghost rounded-md px-3 py-1.5 text-xs font-medium"
                       >
                         remover
                       </button>
@@ -134,12 +138,12 @@ export default async function WatchEntryPage({
                         type="date"
                         name="watchedAt"
                         defaultValue={new Date().toISOString().slice(0, 10)}
-                        className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
+                        className="rounded-md border-border bg-surface px-2 py-1 text-xs"
                       />
                       <button
                         type="submit"
                         aria-label={`marcar episódio ${ep}`}
-                        className="rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-medium hover:bg-emerald-600"
+                        className="btn-anime rounded-md px-3 py-1.5 text-xs font-medium"
                       >
                         Marcar
                       </button>
@@ -151,7 +155,7 @@ export default async function WatchEntryPage({
           </ul>
         )}
 
-        <a href="/watchlist" className="mt-6 inline-block text-sm text-emerald-400">
+        <a href="/watchlist" className="mt-6 inline-block text-sm text-accent">
           ← Minha watchlist
         </a>
       </div>
