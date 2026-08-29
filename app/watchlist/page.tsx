@@ -30,12 +30,12 @@ export default async function WatchlistPage() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 p-8 text-neutral-100">
+    <main className="min-h-screen bg-background p-8 text-foreground">
       <div className="mx-auto max-w-2xl">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Minha Watchlist</h1>
-            <p className="text-sm text-neutral-400">
+            <h1 className="text-3xl font-bold text-gradient">Minha Watchlist</h1>
+            <p className="text-sm text-muted">
               Logado como {user.email}
             </p>
           </div>
@@ -65,7 +65,7 @@ export default async function WatchlistPage() {
         </div>
 
         {entries.length === 0 ? (
-          <p className="mt-6 text-sm text-neutral-500">
+            <p className="mt-6 text-sm text-muted">
             Nenhum anime na sua lista ainda. Busque acima para começar.
           </p>
         ) : (
@@ -75,11 +75,8 @@ export default async function WatchlistPage() {
               if (!group || group.length === 0) return null;
               return (
                 <section key={status}>
-                  <h2 className="mb-2 text-sm font-semibold text-neutral-300">
-                    {STATUS_LABEL[status]}{" "}
-                    <span className="text-neutral-500">({group.length})</span>
-                  </h2>
-                  <ul className="divide-y divide-neutral-800 rounded-lg border border-neutral-800">
+                  <h2 className="mb-2 inline-block rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold text-accent">{STATUS_LABEL[status]} ({group.length})</h2>
+                  <ul className="divide-y divide-border rounded-2xl border border-border bg-surface">
                     {group.map((entry) => (
                       <li key={entry.id} className="flex items-center justify-between gap-4 p-3">
                         <a
@@ -95,7 +92,7 @@ export default async function WatchlistPage() {
                           )}
                           <span>
                             <span className="block text-sm font-medium">{entry.anime.title}</span>
-                            <span className="block text-xs text-neutral-500">{entry.status}</span>
+                            <span className="block text-xs text-muted">{entry.status}</span>
                           </span>
                         </a>
                         <form action={removeFromWatchlistAction}>
