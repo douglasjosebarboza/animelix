@@ -16,9 +16,6 @@ export default function SiteNav({ loggedIn }: { loggedIn: boolean }) {
           Animelix
         </a>
         <div className="flex items-center gap-3">
-          <a href="/" className="text-neutral-300 hover:text-white">
-            Home
-          </a>
           <a href="/search" className="text-neutral-300 hover:text-white">
             Buscar
           </a>
