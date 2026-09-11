@@ -100,7 +100,6 @@ export async function markEpisodeWatched(
     if (!before) {
       throw new WatchlistError("Anime não está na sua watchlist");
     }
-    const firstWatch = before.episodeWatches.length === 0;
 
     const alreadyWatched = findEpisodeWatch(before.episodeWatches, season, episode);
     if (alreadyWatched) {
@@ -121,7 +120,6 @@ export async function markEpisodeWatched(
       type: "markEpisode",
       distinctWatched: distinctCount(after),
       total: after.anime.episodeCount,
-      firstWatch,
     });
     if (transition) {
       await tx.watchEntry.update({

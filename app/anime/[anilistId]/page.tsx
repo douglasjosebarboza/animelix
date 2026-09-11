@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getAnime } from "@/lib/catalogue";
@@ -52,9 +53,11 @@ export default async function AnimePage({
     <main className="flex-1 bg-background p-8 text-foreground">
       <div className="mx-auto flex max-w-3xl gap-6">
         {anime.coverImageUrl && (
-          <img
+          <Image
             src={anime.coverImageUrl}
             alt={anime.title}
+            width={176}
+            height={264}
             className="h-64 w-44 shrink-0 rounded-lg object-cover"
           />
         )}

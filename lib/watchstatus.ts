@@ -5,7 +5,6 @@ export type EngineAction =
       type: "markEpisode";
       distinctWatched: number;
       total: number | null;
-      firstWatch: boolean;
     }
   | {
       type: "removeEpisode";

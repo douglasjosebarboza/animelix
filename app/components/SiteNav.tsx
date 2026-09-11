@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { signOutAction } from "@/lib/auth-actions";
@@ -114,9 +115,11 @@ export default function SiteNav({ loggedIn }: { loggedIn: boolean }) {
                     className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left text-base hover:bg-surface-2 transition-colors"
                   >
                     {anime.coverImageUrl && (
-                      <img
+                      <Image
                         src={anime.coverImageUrl}
                         alt=""
+                        width={28}
+                        height={40}
                         className="h-10 w-7 rounded object-cover"
                       />
                     )}

@@ -35,7 +35,8 @@ export async function loginAction(
   if ("error" in parsed) return parsed;
 
   const hdr = await (await import("next/headers")).headers();
-  const ip = hdr.get("x-forwarded-for") || "anon";
+  const rawIp = hdr.get("x-forwarded-for") || "anon";
+  const ip = rawIp.split(",")[0].trim() || "anon";
   if (!rateLimit(`login:${ip}:${parsed.email}`, 5, 60000).ok) {
     return { error: "Muitas tentativas, aguarde" };
   }

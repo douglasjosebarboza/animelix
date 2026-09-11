@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { computeNextStatus, type WatchStatus } from "@/lib/watchstatus";
 
-const mark = (distinctWatched: number, total: number | null, firstWatch = false) =>
-  ({ type: "markEpisode", distinctWatched, total, firstWatch }) as const;
+const mark = (distinctWatched: number, total: number | null) =>
+  ({ type: "markEpisode", distinctWatched, total }) as const;
 
 const set = (to: WatchStatus) => ({ type: "setStatus", to }) as const;
 
