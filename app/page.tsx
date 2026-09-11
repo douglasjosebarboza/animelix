@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { searchAnime, getSeasonalAnimeCached } from "@/lib/catalogue";
+import { catalog } from "@/lib/catalog";
+import { currentSeason } from "@/lib/anilist";
 
 export default async function HomePage({
   searchParams,
@@ -10,16 +11,15 @@ export default async function HomePage({
 
   const query = q?.trim();
 
-  let results:
-    | Awaited<ReturnType<typeof getSeasonalAnimeCached>>
-    | Awaited<ReturnType<typeof searchAnime>> = [];
+  let results: Awaited<ReturnType<typeof catalog.search>> = [];
   let error: string | null = null;
 
   try {
     if (query) {
-      results = await searchAnime(query);
+      results = await catalog.search(query);
     } else {
-      results = await getSeasonalAnimeCached();
+      const { season, year } = currentSeason();
+      results = await catalog.getSeasonal(season, year);
     }
   } catch (err) {
     error = query
@@ -30,7 +30,6 @@ export default async function HomePage({
   return (
     <main className="flex-1 bg-background p-8 text-foreground">
       <div className="mx-auto max-w-6xl">
-
         {error && (
           <p className="mt-4 rounded-md border border-amber-700 bg-amber-950 p-3 text-base text-amber-300">
             {error}
@@ -45,7 +44,7 @@ export default async function HomePage({
           </p>
         )}
 
-        <ul className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+        <ul className="mt-4 grid min-h-4 grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {results.map((anime) => (
             <li
               key={anime.anilistId}
@@ -58,8 +57,8 @@ export default async function HomePage({
                   width={230}
                   height={345}
                   sizes="(max-width:640px) 50vw, 25vw"
-                  className="aspect-[2/3] w-full object-cover"
-                  unoptimized={false}
+                  className="aspect-2/3 w-full object-cover"
+                  loading="eager"
                 />
               )}
               <div className="p-3">
@@ -67,26 +66,8 @@ export default async function HomePage({
                   {anime.title}
                 </p>
                 <p className="mt-1 text-sm text-accent">
-                  {"averageScore" in anime
-                    ? anime.averageScore != null
-                      ? `★ ${(anime.averageScore / 10).toFixed(1)}`
-                      : "—"
-                    : "episodeCount" in anime
-                      ? `${anime.episodeCount ?? "?"} eps`
-                      : ""}
+                  {`${anime.episodeCount ?? "?"} eps`}
                 </p>
-                {"genres" in anime && (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {anime.genres.slice(0, 3).map((g) => (
-                      <span
-                        key={g}
-                        className="rounded bg-surface-2 px-1.5 py-0.5 text-xs text-muted"
-                      >
-                        {g}
-                      </span>
-                    ))}
-                  </div>
-                )}
                 <a
                   href={`/anime/${anime.anilistId}`}
                   className="btn-anime mt-3 block w-full cursor-pointer rounded-md px-2 py-1.5 text-center text-sm font-medium"

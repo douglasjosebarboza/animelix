@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchAnime } from "@/lib/catalogue";
+import { catalog } from "@/lib/catalog";
 import { rateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const results = await searchAnime(q);
+    const results = await catalog.search(q);
     return NextResponse.json(results, { headers: { "Cache-Control": "public, max-age=60", "X-RateLimit-Remaining": String(rl.remaining) } });
   } catch {
     return NextResponse.json([], { status: 500, headers: { "Cache-Control": "no-store", "X-RateLimit-Remaining": String(rl.remaining) } });

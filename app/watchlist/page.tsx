@@ -75,8 +75,8 @@ export default async function WatchlistPage({
                                 width={230}
                                 height={345}
                                 sizes="(max-width:640px) 50vw, 25vw"
-                                className="aspect-[2/3] w-full object-cover"
-                                unoptimized={false}
+                                className="aspect-2/3 w-full object-cover"
+                                loading="eager"
                               />
                             )}
                             <div className="p-3">

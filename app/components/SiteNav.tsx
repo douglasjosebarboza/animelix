@@ -121,6 +121,7 @@ export default function SiteNav({ loggedIn }: { loggedIn: boolean }) {
                         width={28}
                         height={40}
                         className="h-10 w-7 rounded object-cover"
+                        loading="eager"
                       />
                     )}
                     <span className="line-clamp-1">{anime.title}</span>
