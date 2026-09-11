@@ -204,3 +204,19 @@ export async function getSeasonalAnime(opts: {
   });
   return (data.Page?.media ?? []).map(mapSeasonal);
 }
+
+import type { AnimeDataSource, Seed } from "./datasource";
+export class AnilistAdapter implements AnimeDataSource {
+  async search(q: string): Promise<Seed[]> {
+    const r = await searchAnime(q);
+    return r.map((s) => ({ anilistId: s.anilistId, title: s.title, coverImageUrl: s.coverImageUrl, episodeCount: s.episodeCount }));
+  }
+  async getById(id: number): Promise<Seed> {
+    const s = await getAnimeById(id);
+    return { anilistId: s.anilistId, title: s.title, coverImageUrl: s.coverImageUrl, episodeCount: s.episodeCount };
+  }
+  async getSeasonal(season: Season, year: number): Promise<Seed[]> {
+    const r = await getSeasonalAnime({ season, seasonYear: year });
+    return r.map((s) => ({ anilistId: s.anilistId, title: s.title, coverImageUrl: s.coverImageUrl, episodeCount: s.episodeCount }));
+  }
+}
