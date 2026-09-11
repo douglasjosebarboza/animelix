@@ -10,6 +10,7 @@ import {
 } from "@/lib/anilist";
 import { prisma } from "@/lib/prisma";
 import { logEvent } from "@/lib/logger";
+import { unstable_cache } from "next/cache";
 
 const SNAPSHOT_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -43,6 +44,45 @@ export async function searchAnime(query: string): Promise<AnimeSeed[]> {
 export async function getSeasonalAnime(genre?: string): Promise<SeasonalAnime[]> {
   const { season, year } = currentSeason();
   return anilistSeasonal({ season, seasonYear: year, genre });
+}
+
+async function fetchSeasonalAnimeCached(genre?: string): Promise<SeasonalAnime[]> {
+  const { season, year } = currentSeason();
+  try {
+    return await anilistSeasonal({ season, seasonYear: year, genre, perPage: 30 });
+  } catch (err) {
+    logEvent("anilist_fallback", { season, year, genre: genre ?? null, error: String(err) });
+    const rows = await prisma.anime.findMany({ take: 30, orderBy: { snapshotAt: "desc" } });
+    return rows.map((r) => ({
+      anilistId: r.anilistId,
+      title: r.title,
+      coverImageUrl: r.coverImageUrl,
+      episodeCount: r.episodeCount,
+      averageScore: null,
+      genres: [] as string[],
+    }));
+  }
+}
+
+const _cachedSeasonal = unstable_cache(fetchSeasonalAnimeCached, ["seasonal"], {
+  revalidate: 3600,
+  tags: ["seasonal"],
+});
+
+export async function getSeasonalAnimeCached(genre?: string): Promise<SeasonalAnime[]> {
+  // Vitest / unit test: incrementalCache is missing, so bypass Next.js cache layer
+  // and execute the fallback-aware logic directly.
+  if (process.env.VITEST) {
+    return fetchSeasonalAnimeCached(genre);
+  }
+  try {
+    return await (_cachedSeasonal as (g?: string) => Promise<SeasonalAnime[]>)(genre);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("incrementalCache")) {
+      return fetchSeasonalAnimeCached(genre);
+    }
+    throw err;
+  }
 }
 
 export type { SeasonRef, SeasonalAnime };
