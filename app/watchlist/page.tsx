@@ -1,21 +1,16 @@
+import Image from "next/image";
 import { requireUser } from "@/auth";
 import { listWatchEntries } from "@/lib/watchlist";
-import { removeFromWatchlistAction, deleteAccountAction } from "@/lib/watchlist-actions";
+import {
+  removeFromWatchlistAction,
+  deleteAccountAction,
+} from "@/lib/watchlist-actions";
 
-const STATUS_ORDER: string[] = [
-  "plan_to_watch",
-  "watching",
-  "completed",
-  "paused",
-  "dropped",
-];
+const STATUS_ORDER: string[] = ["watching", "completed"];
 
 const STATUS_LABEL: Record<string, string> = {
-  plan_to_watch: "Planejar assistir",
   watching: "Assistindo",
   completed: "Completo",
-  paused: "Pausado",
-  dropped: "Abandonado",
 };
 
 export default async function WatchlistPage() {
@@ -30,42 +25,22 @@ export default async function WatchlistPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background p-8 text-foreground">
-      <div className="mx-auto max-w-2xl">
+    <main className="flex-1 bg-background p-8 text-foreground">
+      <div className="mx-auto max-w-3xl">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gradient">Minha Watchlist</h1>
-            <p className="text-sm text-muted">
-              Logado como {user.email}
-            </p>
-          </div>
+          <h1 className="text-4xl font-bold text-gradient">Minha Watchlist</h1>
           <form action={deleteAccountAction}>
             <button
               type="submit"
-              className="rounded-md border border-red-800 px-3 py-2 text-sm text-red-300 hover:bg-red-950"
+              className="cursor-pointer rounded-md border border-red-800 px-3 py-2 text-base text-red-300 hover:bg-red-950"
             >
-              Excluir conta
+              Excluir Conta
             </button>
           </form>
         </div>
 
-        <div className="mt-6 flex gap-4">
-          <a
-            href="/search"
-            className="text-sm text-accent hover:underline"
-          >
-            + Buscar animes na AniList
-          </a>
-          <a
-            href="/activity"
-            className="text-sm text-accent hover:underline"
-          >
-            Ver atividade
-          </a>
-        </div>
-
         {entries.length === 0 ? (
-            <p className="mt-6 text-sm text-muted">
+          <p className="mt-6 text-base text-muted">
             Nenhum anime na sua lista ainda. Busque acima para começar.
           </p>
         ) : (
@@ -75,39 +50,56 @@ export default async function WatchlistPage() {
               if (!group || group.length === 0) return null;
               return (
                 <section key={status}>
-                  <h2 className="mb-2 inline-block rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold text-accent">{STATUS_LABEL[status]} ({group.length})</h2>
-                  <ul className="divide-y divide-border rounded-2xl border border-border bg-surface">
+                  <h2 className="mb-2 inline-block rounded-full bg-surface-2 px-3 py-1 text-base font-semibold text-accent">
+                    {STATUS_LABEL[status]} ({group.length})
+                  </h2>
+                  <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                     {group.map((entry) => (
-                      <li key={entry.id} className="flex items-center justify-between gap-4 p-3">
+                      <li
+                        key={entry.id}
+                        className="group overflow-hidden rounded-2xl border border-border bg-surface transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/20"
+                      >
                         <a
                           href={`/watchlist/${entry.anime.anilistId}`}
-                          className="flex items-center gap-3 hover:text-accent"
+                          className="block cursor-pointer"
                         >
                           {entry.anime.coverImageUrl && (
-                            <img
+                            <Image
                               src={entry.anime.coverImageUrl}
                               alt={entry.anime.title}
-                              className="h-12 w-9 rounded object-cover"
+                              width={230}
+                              height={345}
+                              sizes="(max-width:640px) 50vw, 25vw"
+                              className="aspect-[2/3] w-full object-cover"
+                              unoptimized={false}
                             />
                           )}
-                          <span>
-                            <span className="block text-sm font-medium">{entry.anime.title}</span>
-                            <span className="block text-xs text-muted">{entry.status}</span>
-                          </span>
+                          <div className="p-3">
+                            <p className="line-clamp-2 text-base font-medium text-foreground">
+                              {entry.anime.title}
+                            </p>
+                            <p className="mt-1 text-sm capitalize text-accent">
+                              {entry.status === "watching"
+                                ? "assistindo"
+                                : "completado"}
+                            </p>
+                          </div>
                         </a>
-                        <form action={removeFromWatchlistAction}>
-                          <input
-                            type="hidden"
-                            name="anilistId"
-                            value={entry.anime.anilistId}
-                          />
-                          <button
-                            type="submit"
-                            className="rounded-md border border-red-800 px-3 py-1.5 text-xs text-red-300 hover:bg-red-950"
-                          >
-                            Remover
-                          </button>
-                        </form>
+                        <div className="p-3 pt-0">
+                          <form action={removeFromWatchlistAction}>
+                            <input
+                              type="hidden"
+                              name="anilistId"
+                              value={entry.anime.anilistId}
+                            />
+                            <button
+                              type="submit"
+                              className="w-full cursor-pointer rounded-md border border-red-800 px-3 py-1.5 text-sm text-red-300 hover:bg-red-950"
+                            >
+                              Remover
+                            </button>
+                          </form>
+                        </div>
                       </li>
                     ))}
                   </ul>

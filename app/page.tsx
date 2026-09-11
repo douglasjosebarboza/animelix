@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { searchAnime, getSeasonalAnimeCached } from "@/lib/catalogue";
 
 export default async function HomePage({
@@ -51,10 +52,14 @@ export default async function HomePage({
               className="group overflow-hidden rounded-2xl border border-border bg-surface transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/20"
             >
               {anime.coverImageUrl && (
-                <img
+                <Image
                   src={anime.coverImageUrl}
                   alt={anime.title}
-                  className="aspect-2/3 w-full object-cover"
+                  width={230}
+                  height={345}
+                  sizes="(max-width:640px) 50vw, 25vw"
+                  className="aspect-[2/3] w-full object-cover"
+                  unoptimized={false}
                 />
               )}
               <div className="p-3">
