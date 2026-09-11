@@ -35,7 +35,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="flex min-h-screen flex-col">
         <SiteNav loggedIn={!!session?.user?.id} />
         {children}
       </body>

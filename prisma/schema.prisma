@@ -34,7 +34,7 @@ model WatchEntry {
   id               String   @id @default(cuid())
   userId           String
   animeId          String
-  status           String   @default("plan_to_watch")
+  status           String   @default("watching")
   lastEpisodeSeason Int?
   lastEpisodeNumber Int?
   lastWatchedAt    DateTime?
@@ -45,22 +45,8 @@ model WatchEntry {
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   anime          Anime         @relation(fields: [animeId], references: [id], onDelete: Cascade)
   episodeWatches EpisodeWatch[]
-  statusTransitions StatusTransition[]
 
   @@unique([userId, animeId])
-}
-
-model StatusTransition {
-  id           String   @id @default(cuid())
-  watchEntryId String
-  fromStatus   String
-  toStatus     String
-  reason       String
-  occurredAt   DateTime @default(now())
-
-  watchEntry  WatchEntry @relation(fields: [watchEntryId], references: [id], onDelete: Cascade)
-
-  @@index([watchEntryId])
 }
 
 model EpisodeWatch {

@@ -19,9 +19,8 @@ test("cross-user cannot access another user's watchlist entry (404)", async ({ p
 
   // User A adds an anime and lands on their watchlist entry
   await signUp(page, aEmail);
-  await page.goto("/search?q=frieren");
-  await page.getByRole("button", { name: "Adicionar" }).first().click();
-  await expect(page).toHaveURL(/\/anime\/\d+/);
+  await page.goto("/anime/1");
+  await expect(page.getByRole("heading", { name: /Cowboy Bebop/i })).toBeVisible();
   await page.getByRole("button", { name: /add to watchlist/i }).click();
   await expect(page).toHaveURL(/\/watchlist\/\d+/);
   const aUrl = page.url();

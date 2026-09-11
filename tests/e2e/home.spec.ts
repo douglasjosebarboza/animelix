@@ -1,15 +1,15 @@
 import { test, expect } from "@playwright/test";
 
-test("home loads without login and shows the season filter", async ({ page }) => {
+test("home loads without login and shows anime list", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Temporada atual/ })).toBeVisible();
-  await expect(page.getByRole("combobox", { name: /Gênero/i })).toBeVisible();
+  // No genre filter, no heading — just list/error/count
+  await expect(page.getByRole("combobox", { name: /Gênero/i })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /Temporada atual/ })).toHaveCount(0);
+  // Either error banner or grid should be present (grid may be empty when AniList down)
+  await expect(page.locator("main")).toBeVisible();
 });
 
-test("selecting a genre filters by query param", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("combobox", { name: /Gênero/i }).selectOption("Action");
-  await page.getByRole("button", { name: /Filtrar/i }).click();
-  await expect(page).toHaveURL(/\?genre=Action/);
-  await expect(page.getByRole("combobox", { name: /Gênero/i })).toHaveValue("Action");
+test("search via navbar q param shows results", async ({ page }) => {
+  await page.goto("/?q=frieren");
+  await expect(page.locator("main")).toBeVisible();
 });

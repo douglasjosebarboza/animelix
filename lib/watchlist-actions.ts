@@ -52,10 +52,8 @@ export async function markEpisodeAction(formData: FormData): Promise<void> {
   const anilistId = Number(formData.get("anilistId"));
   const season = Number(formData.get("season"));
   const episode = Number(formData.get("episode"));
-  const dateStr = String(formData.get("watchedAt") ?? "");
-  const watchedAt = dateStr ? new Date(dateStr) : new Date();
   try {
-    await markEpisodeWatched(userId, anilistId, season, episode, watchedAt);
+    await markEpisodeWatched(userId, anilistId, season, episode);
   } catch (err) {
     if (err instanceof WatchlistError) {
       redirect(`/watchlist/${anilistId}?error=${encodeURIComponent(err.message)}`);
@@ -78,13 +76,7 @@ export async function removeEpisodeAction(formData: FormData): Promise<void> {
   revalidatePath(`/watchlist/${anilistId}`);
 }
 
-const STATUSES: WatchStatus[] = [
-  "plan_to_watch",
-  "watching",
-  "completed",
-  "paused",
-  "dropped",
-];
+const STATUSES: WatchStatus[] = ["watching", "completed"];
 
 export async function setWatchStatusAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();

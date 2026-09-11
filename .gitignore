@@ -41,5 +41,3 @@ next-env.d.ts
 
 # Neon CLI scaffolding artifacts (not part of the app)
 .agents/
-.claude/
-CLAUDE.md

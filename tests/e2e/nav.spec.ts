@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test("logged-out users see Home/Buscar/Entrar/Registrar and no Perfil", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Buscar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Buscar" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Entrar" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Registrar" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Perfil" })).toHaveCount(0);
@@ -10,12 +10,12 @@ test("logged-out users see Home/Buscar/Entrar/Registrar and no Perfil", async ({
   await expect(page.getByRole("link", { name: "Home" })).toHaveCount(0);
 });
 
-test("nav is hidden on login and register pages", async ({ page }) => {
+test("nav is visible on login and register pages", async ({ page }) => {
   await page.goto("/login");
-  await expect(page.getByRole("link", { name: "Animelix" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Animelix" })).toBeVisible();
 
   await page.goto("/register");
-  await expect(page.getByRole("link", { name: "Animelix" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Animelix" })).toBeVisible();
 });
 
 test("logged-in users see Perfil and Sair, and Sair logs them out", async ({ page }) => {

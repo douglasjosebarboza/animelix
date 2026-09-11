@@ -16,7 +16,7 @@ test("register, login, and reach the protected watchlist", async ({ page }) => {
   await page.click('button[type="submit"]');
 
   await expect(page).toHaveURL(/\/watchlist$/);
-  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Minha Watchlist/i })).toBeVisible();
 });
 
 test("unauthenticated visit to /watchlist redirects to /login", async ({

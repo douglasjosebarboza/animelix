@@ -59,6 +59,7 @@
     var(--color-accent-2)
   );
   color: #ffffff;
+  cursor: pointer;
 }
 .btn-anime:hover {
   filter: brightness(1.08);
@@ -67,12 +68,33 @@
 @utility btn-ghost {
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
+  cursor: pointer;
 }
 .btn-ghost:hover {
   background-color: var(--color-surface-2);
 }
 
+html {
+  font-size: 18px;
+}
+
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
+}
+
+@layer base {
+  a,
+  button,
+  [role="button"],
+  select,
+  label:has(input[type="checkbox"]),
+  input[type="checkbox"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  a:disabled {
+    cursor: not-allowed;
+  }
 }

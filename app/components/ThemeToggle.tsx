@@ -27,7 +27,7 @@ export default function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label="Alternar tema"
-      className="rounded-md border border-border px-2 py-1 text-xs text-muted hover:bg-surface-2"
+      className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-2"
     >
       {mounted ? (dark ? "☀" : "☾") : "◐"}
     </button>

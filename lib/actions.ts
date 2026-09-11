@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/auth";
 import { parseCredentials, type AuthResult } from "@/lib/credentials";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function registerAction(
   _prev: AuthResult,
@@ -32,6 +33,12 @@ export async function loginAction(
 ): Promise<AuthResult> {
   const parsed = parseCredentials(formData);
   if ("error" in parsed) return parsed;
+
+  const hdr = await (await import("next/headers")).headers();
+  const ip = hdr.get("x-forwarded-for") || "anon";
+  if (!rateLimit(`login:${ip}:${parsed.email}`, 5, 60000).ok) {
+    return { error: "Muitas tentativas, aguarde" };
+  }
 
   try {
     await signIn("credentials", {
