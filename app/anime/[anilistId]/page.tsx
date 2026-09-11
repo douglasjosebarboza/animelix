@@ -27,19 +27,20 @@ export default async function AnimePage({
   }
 
   let anime;
-  let stale = false;
   try {
     anime = await getAnime(anilistId);
-    const ageHours = (Date.now() - anime.snapshotAt.getTime()) / 36e5;
-    stale = ageHours > 24;
   } catch (err) {
     return (
       <main className="flex-1 bg-background p-8 text-foreground">
         <div className="mx-auto max-w-3xl">
           <p className="rounded-md border border-amber-700 bg-amber-950 p-3 text-base text-amber-300">
-            Não foi possível carregar este anime da AniList: {(err as Error).message}
+            Não foi possível carregar este anime da AniList:{" "}
+            {(err as Error).message}
           </p>
-          <a href="/" className="cursor-pointer mt-4 inline-block text-base text-accent">
+          <a
+            href="/"
+            className="cursor-pointer mt-4 inline-block text-base text-accent"
+          >
             ← Voltar
           </a>
         </div>
@@ -59,6 +60,7 @@ export default async function AnimePage({
             width={176}
             height={264}
             className="h-64 w-44 shrink-0 rounded-lg object-cover"
+            loading="eager"
           />
         )}
         <div className="flex-1">
@@ -68,21 +70,7 @@ export default async function AnimePage({
               <dt className="w-32 text-muted">Episódios:</dt>
               <dd>{anime.episodeCount ?? "?"}</dd>
             </div>
-            <div className="flex gap-2">
-              <dt className="w-32 text-muted">Temporadas:</dt>
-              <dd>{anime.seasonCount ?? "?"}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="w-32 text-muted">Snapshot:</dt>
-              <dd>{anime.snapshotAt.toLocaleString()}</dd>
-            </div>
           </dl>
-
-          {stale && (
-            <p className="mt-3 rounded-md border border-amber-700 bg-amber-950 p-2 text-sm text-amber-300">
-              Dados podem estar desatualizados (TTL de 24h expirado).
-            </p>
-          )}
 
           {error === "already_in_watchlist" && (
             <p className="mt-3 rounded-md border border-amber-700 bg-amber-950 p-2 text-sm text-amber-300">
@@ -121,7 +109,10 @@ export default async function AnimePage({
             </form>
           </div>
 
-          <a href="/" className="cursor-pointer mt-4 inline-block text-base text-accent">
+          <a
+            href="/"
+            className="cursor-pointer mt-4 inline-block text-base text-accent"
+          >
             ← Voltar
           </a>
         </div>

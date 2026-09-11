@@ -22,42 +22,31 @@ model Anime {
   title         String
   coverImageUrl String?
   episodeCount  Int?
-  seasonCount   Int?
-  snapshotAt    DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
 
-  watchEntries  WatchEntry[]
+  watchEntries WatchEntry[]
 }
 
 model WatchEntry {
-  id               String   @id @default(cuid())
-  userId           String
-  animeId          String
-  status           String   @default("watching")
-  lastEpisodeSeason Int?
-  lastEpisodeNumber Int?
-  lastWatchedAt    DateTime?
-  autoPauseEnabled Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  animeId   String
+  status    String   @default("watching")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  anime          Anime         @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anime          Anime          @relation(fields: [animeId], references: [id], onDelete: Cascade)
   episodeWatches EpisodeWatch[]
 
   @@unique([userId, animeId])
 }
 
 model EpisodeWatch {
-  id          String   @id @default(cuid())
+  id           String @id @default(cuid())
   watchEntryId String
-  season      Int      @default(1)
-  episode     Int
-  watchedAt   DateTime @default(now())
-  createdAt   DateTime @default(now())
+  episode      Int
 
-  watchEntry  WatchEntry @relation(fields: [watchEntryId], references: [id], onDelete: Cascade)
+  watchEntry WatchEntry @relation(fields: [watchEntryId], references: [id], onDelete: Cascade)
 
-  @@unique([watchEntryId, season, episode])
+  @@unique([watchEntryId, episode])
 }

@@ -22,17 +22,13 @@ const findUnique = vi.mocked(prisma.anime.findUnique);
 const upsert = vi.mocked(prisma.anime.upsert);
 const getById = vi.mocked(getAnimeById);
 
-function seed(anilistId: number, ageHours = 0) {
+function seed(anilistId: number) {
   return {
     id: `seed-${anilistId}`,
     anilistId,
     title: `Anime ${anilistId}`,
     coverImageUrl: null,
     episodeCount: 12,
-    seasonCount: 1,
-    snapshotAt: new Date(Date.now() - ageHours * 36e5),
-    createdAt: new Date(),
-    updatedAt: new Date(),
   };
 }
 
@@ -42,7 +38,7 @@ function freshSeed(anilistId: number) {
     title: `Anime ${anilistId}`,
     coverImageUrl: null,
     episodeCount: 12,
-    seasonCount: 1,
+    seasonCount: null,
   };
 }
 
@@ -67,8 +63,8 @@ describe("catalogue getAnime", () => {
     expect(result.anilistId).toBe(5);
   });
 
-  it("fresh cache (<=24h): never calls AniList", async () => {
-    findUnique.mockResolvedValue(seed(5, 2));
+  it("fresh cache: never calls AniList", async () => {
+    findUnique.mockResolvedValue(seed(5) as never);
 
     const result = await getAnime(5);
 
@@ -76,43 +72,37 @@ describe("catalogue getAnime", () => {
     expect(result.anilistId).toBe(5);
   });
 
-  it("stale cache (>24h): returns cache and triggers a background refresh", async () => {
-    findUnique.mockResolvedValue(seed(5, 48));
+  it("stale cache (>24h): returns cache without background refresh (TTL removed)", async () => {
+    findUnique.mockResolvedValue(seed(5) as never);
     getById.mockResolvedValue(freshSeed(5));
-    upsert.mockResolvedValue(seed(5, 0) as never);
+    upsert.mockResolvedValue(seed(5) as never);
 
     const result = await getAnime(5);
 
-    // read returns the (stale) cache immediately
-    expect(result.snapshotAt.getTime()).toBeLessThan(Date.now() - 24 * 36e5);
+    expect(result.anilistId).toBe(5);
 
-    // background refresh eventually hits AniList + upsert
+    // no background refresh after minimal schema (TTL removed)
     await new Promise((r) => setTimeout(r, 10));
-    expect(getById).toHaveBeenCalledWith(5);
-    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(getById).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
   });
 
-  it("stale cache with AniList failure: still returns cache, logs and does not throw", async () => {
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    findUnique.mockResolvedValue(seed(5, 48));
+  it("stale cache with AniList failure: still returns cache, no throw", async () => {
+    findUnique.mockResolvedValue(seed(5) as never);
     getById.mockRejectedValue(new Error("AniList 503"));
 
     const result = await getAnime(5);
     expect(result.anilistId).toBe(5);
 
     await new Promise((r) => setTimeout(r, 10));
-    expect(getById).toHaveBeenCalledWith(5);
-    expect(logSpy).toHaveBeenCalled();
-    const logged = logSpy.mock.calls.map((c) => String(c[0])).join(" ");
-    expect(logged).toContain("anilist_error");
-    logSpy.mockRestore();
+    expect(getById).not.toHaveBeenCalled();
   });
 });
 
 describe("catalogue refreshAnime", () => {
   it("forces an immediate AniList fetch and overwrites the snapshot", async () => {
     getById.mockResolvedValue(freshSeed(9));
-    upsert.mockResolvedValue(seed(9, 0) as never);
+    upsert.mockResolvedValue(seed(9) as never);
 
     const result = await refreshAnime(9);
 

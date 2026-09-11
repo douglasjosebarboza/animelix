@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getAnime } from "@/lib/catalogue";
+import { catalog } from "@/lib/catalog";
 import { computeNextStatus, type WatchStatus } from "@/lib/watchstatus";
 
 export class WatchlistError extends Error {
@@ -15,20 +15,24 @@ type EntryWithRelations = Prisma.WatchEntryGetPayload<{
 }>;
 
 function distinctCount(entry: EntryWithRelations): number {
-  const set = new Set(entry.episodeWatches.map((e) => `${e.season}:${e.episode}`));
+  const set = new Set(entry.episodeWatches.map((e) => e.episode));
   return set.size;
 }
 
 function findEpisodeWatch(
-  watches: { id: string; season: number; episode: number }[],
-  season: number,
+  watches: { id: string; episode: number }[],
   episode: number,
 ) {
-  return watches.find((e) => e.season === season && e.episode === episode);
+  return watches.find((e) => e.episode === episode);
 }
 
 async function resolveAnimeId(anilistId: number): Promise<string> {
-  const anime = await getAnime(anilistId);
+  const seed = await catalog.getById(anilistId);
+  const anime = await prisma.anime.upsert({
+    where: { anilistId: seed.anilistId },
+    update: { title: seed.title, coverImageUrl: seed.coverImageUrl, episodeCount: seed.episodeCount },
+    create: { anilistId: seed.anilistId, title: seed.title, coverImageUrl: seed.coverImageUrl, episodeCount: seed.episodeCount },
+  });
   return anime.id;
 }
 
@@ -69,7 +73,7 @@ export async function getWatchEntry(userId: string, anilistId: number) {
     where: { userId_animeId: { userId, animeId: anime.id } },
     include: {
       anime: true,
-      episodeWatches: { orderBy: [{ createdAt: "asc" }] },
+      episodeWatches: { orderBy: [{ episode: "asc" }] },
     },
   });
 }
@@ -88,9 +92,10 @@ async function applyTransition(
 export async function markEpisodeWatched(
   userId: string,
   anilistId: number,
-  season: number,
-  episode: number,
+  seasonOrEpisode: number,
+  episodeMaybe?: number,
 ): Promise<void> {
+  const episode = episodeMaybe !== undefined ? episodeMaybe : seasonOrEpisode;
   const animeId = await resolveAnimeId(anilistId);
   return prisma.$transaction(async (tx) => {
     const before = await tx.watchEntry.findUnique({
@@ -101,13 +106,13 @@ export async function markEpisodeWatched(
       throw new WatchlistError("Anime não está na sua watchlist");
     }
 
-    const alreadyWatched = findEpisodeWatch(before.episodeWatches, season, episode);
+    const alreadyWatched = findEpisodeWatch(before.episodeWatches, episode);
     if (alreadyWatched) {
       throw new WatchlistError("Episódio já assistido");
     }
 
     await tx.episodeWatch.create({
-      data: { watchEntryId: before.id, season, episode },
+      data: { watchEntryId: before.id, episode },
     });
 
     const after = await tx.watchEntry.findUnique({
@@ -168,9 +173,10 @@ export async function runAutoPauseJob(_now: Date = new Date()): Promise<number> 
 export async function removeEpisodeWatch(
   userId: string,
   anilistId: number,
-  season: number,
-  episode: number,
+  seasonOrEpisode: number,
+  episodeMaybe?: number,
 ): Promise<boolean> {
+  const episode = episodeMaybe !== undefined ? episodeMaybe : seasonOrEpisode;
   const animeId = await resolveAnimeId(anilistId);
   return prisma.$transaction(async (tx) => {
     const entry = await tx.watchEntry.findUnique({
@@ -180,7 +186,7 @@ export async function removeEpisodeWatch(
     if (!entry) {
       throw new WatchlistError("Anime não está na sua watchlist");
     }
-    const target = findEpisodeWatch(entry.episodeWatches, season, episode);
+    const target = findEpisodeWatch(entry.episodeWatches, episode);
     if (!target) return false;
 
     await tx.episodeWatch.delete({ where: { id: target.id } });
@@ -200,7 +206,7 @@ export async function removeEpisodeWatch(
     const remainingWatches = entry.episodeWatches.filter((e) => e.id !== target.id);
     const transition = computeNextStatus(entry.status as WatchStatus, {
       type: "removeEpisode",
-      distinctWatched: distinctCount({ ...entry, episodeWatches: remainingWatches }),
+      distinctWatched: distinctCount({ ...entry, episodeWatches: remainingWatches } as EntryWithRelations),
       total: entry.anime.episodeCount,
     });
     if (transition) {
