@@ -42,12 +42,16 @@ export default async function HomePage({
               key={anime.anilistId ?? idx}
               className="group overflow-hidden rounded-2xl border border-border bg-surface transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/20"
             >
+              <a
+                href={`/anime/${anime.anilistId}`}
+                className="block cursor-pointer"
+              >
               {anime.coverImageUrl && (
                 <Image
                   src={anime.coverImageUrl}
                   alt={anime.title}
-                  width={230}
-                  height={345}
+                  width={460}
+                  height={690}
                   sizes="(max-width:640px) 50vw, 25vw"
                   className="aspect-2/3 w-full object-cover"
                   loading="eager"
@@ -60,13 +64,8 @@ export default async function HomePage({
                 <p className="mt-1 text-sm text-accent">
                   {`${anime.episodeCount ?? "?"} eps`}
                 </p>
-                 <a
-                   href={`/anime/${anime.anilistId}`}
-                   className="btn-anime mt-3 block w-full cursor-pointer rounded-md px-2 py-1.5 text-center text-sm font-medium"
-                 >
-                  Ver detalhes
-                </a>
               </div>
+              </a>
             </li>
           ))}
         </ul>

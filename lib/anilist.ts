@@ -27,7 +27,7 @@ export class AnilistError extends Error {
 type RawMedia = {
   id: number;
   title: { romaji?: string; english?: string; native?: string };
-  coverImage?: { large?: string } | null;
+  coverImage?: { large?: string; extraLarge?: string } | null;
   episodes?: number | null;
   averageScore?: number | null;
   genres?: string[] | null;
@@ -64,7 +64,7 @@ function mapMedia(m: RawMedia): AnimeSeed {
   return {
     anilistId: m.id,
     title: pickTitle(m.title),
-    coverImageUrl: m.coverImage?.large ?? null,
+    coverImageUrl: m.coverImage?.extraLarge ?? m.coverImage?.large ?? null,
     episodeCount: m.episodes ?? null,
     seasonCount: null,
     description: sanitizeDescription(m.description),
@@ -134,7 +134,7 @@ const SEARCH_QUERY = `
       media(search: $q, type: ANIME, isAdult: false) {
         id
         title { romaji english native }
-        coverImage { large }
+        coverImage { extraLarge large }
         episodes
       }
     }
@@ -146,7 +146,7 @@ const BY_ID_QUERY = `
     Media(id: $id, type: ANIME) {
       id
       title { romaji english native }
-      coverImage { large }
+      coverImage { extraLarge large }
       episodes
       description(asHtml: false)
       streamingEpisodes { title }
@@ -193,7 +193,7 @@ const SEASONAL_QUERY = `
       ) {
         id
         title { romaji english native }
-        coverImage { large }
+        coverImage { extraLarge large }
         episodes
         averageScore
         genres
