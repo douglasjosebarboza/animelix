@@ -8,7 +8,6 @@ import { parsePositiveInt } from "@/lib/parse";
 import {
   markEpisodeAction,
   removeEpisodeAction,
-  removeFromWatchlistAction,
   markUpToAction,
   markAllAction,
   clearAllAction,
@@ -62,6 +61,17 @@ export default async function AnimePage({
   const watches = entry?.episodeWatches ?? [];
   const progress = computeProgress(watches, total);
   const watchedSet = new Set<number>(watches.map((ew) => ew.episode));
+  // "Até aqui" no primeiro ep não visto equivale ao toggle simples:
+  // só mostra quando há algum ep anterior não visto.
+  let firstUnwatched = Number.POSITIVE_INFINITY;
+  if (total != null) {
+    for (let ep = 1; ep <= total; ep++) {
+      if (!watchedSet.has(ep)) {
+        firstUnwatched = ep;
+        break;
+      }
+    }
+  }
   const epTitle = (ep: number): string => {
     // episodeTitles pode vir ausente de cache antigo (formato pré-Task 1);
     // nesse caso degrada para "Episódio N" até o cache renovar.
@@ -116,19 +126,6 @@ export default async function AnimePage({
               <p className="mt-4 text-base text-muted">{anime.description}</p>
             )}
 
-            {entry && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <form action={removeFromWatchlistAction}>
-                  <input type="hidden" name="anilistId" value={anilistId} />
-                  <button
-                    type="submit"
-                    className="cursor-pointer rounded-md border border-red-800 px-4 py-2 text-base text-red-300 hover:bg-red-950"
-                  >
-                    Remover
-                  </button>
-                </form>
-              </div>
-            )}
           </div>
         </div>
 
@@ -188,7 +185,8 @@ export default async function AnimePage({
                         </form>
                       ) : (
                         <>
-                          <form action={markUpToAction}>
+                          {ep > firstUnwatched && (
+                            <form action={markUpToAction}>
                             <input type="hidden" name="anilistId" value={anilistId} />
                             <input type="hidden" name="season" value={1} />
                             <input type="hidden" name="episode" value={ep} />
@@ -202,6 +200,7 @@ export default async function AnimePage({
                               até aqui
                             </button>
                           </form>
+                          )}
                           <form action={markEpisodeAction}>
                             <input type="hidden" name="anilistId" value={anilistId} />
                             <input type="hidden" name="season" value={1} />
