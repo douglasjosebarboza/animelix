@@ -716,7 +716,7 @@ const cards = entries.map((entry, i) => {
   const s = seeds[i];
   const anime = s.status === "fulfilled"
     ? s.value
-    : { anilistId: entry.anilistId, title: `Anime ${entry.anilistId}`, coverImageUrl: null as string | null, episodeCount: null as number | null };
+    : { anilistId: entry.anilistId, title: `Anime ${entry.anilistId}`, coverImageUrl: null as string | null, episodeCount: null as number | null, seasonCount: null };
   return { entry, anime, unavailable: s.status === "rejected" };
 });
 ```
