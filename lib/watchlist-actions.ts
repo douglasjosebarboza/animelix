@@ -15,16 +15,7 @@ import {
   WatchlistError,
 } from "@/lib/watchlist";
 import type { WatchStatus } from "@/lib/watchstatus";
-
-export function parsePositiveInt(value: FormDataEntryValue | null): number | null {
-  if (value == null || value === "") return null;
-  const n = Number(value);
-  return Number.isInteger(n) && n > 0 ? n : null;
-}
-
-export function parseTotal(value: FormDataEntryValue | null): number | null {
-  return parsePositiveInt(value);
-}
+import { parsePositiveInt, parseTotal } from "@/lib/parse";
 
 async function requireUserId(): Promise<string> {
   const session = await auth();

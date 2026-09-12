@@ -1,11 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-vi.mock("@/auth", () => ({
-  auth: vi.fn(),
-  signOut: vi.fn(),
-}));
-
-import { parsePositiveInt, parseTotal } from "@/lib/watchlist-actions";
+import { parsePositiveInt, parseTotal } from "@/lib/parse";
 
 describe("parseTotal", () => {
   it("converte string numérica", () => {
