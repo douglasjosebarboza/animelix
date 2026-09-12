@@ -1,6 +1,5 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { catalog } from "@/lib/catalog";
 import { computeNextStatus, type WatchStatus } from "@/lib/watchstatus";
 
 export class WatchlistError extends Error {
@@ -11,7 +10,7 @@ export class WatchlistError extends Error {
 }
 
 type EntryWithRelations = Prisma.WatchEntryGetPayload<{
-  include: { anime: true; episodeWatches: true };
+  include: { episodeWatches: true };
 }>;
 
 function distinctCount(entry: EntryWithRelations): number {
@@ -26,30 +25,16 @@ function findEpisodeWatch(
   return watches.find((e) => e.episode === episode);
 }
 
-async function resolveAnimeId(anilistId: number): Promise<string> {
-  const seed = await catalog.getById(anilistId);
-  const anime = await prisma.anime.upsert({
-    where: { anilistId: seed.anilistId },
-    update: { title: seed.title, coverImageUrl: seed.coverImageUrl, episodeCount: seed.episodeCount },
-    create: { anilistId: seed.anilistId, title: seed.title, coverImageUrl: seed.coverImageUrl, episodeCount: seed.episodeCount },
-  });
-  return anime.id;
-}
-
 export async function addToWatchlist(
   userId: string,
   anilistId: number,
 ): Promise<void> {
-  const animeId = await resolveAnimeId(anilistId);
   try {
     await prisma.watchEntry.create({
-      data: { userId, animeId, status: "watching" },
+      data: { userId, anilistId, status: "watching" },
     });
   } catch (err) {
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002"
-    ) {
+    if ((err as { code?: string }).code === "P2002") {
       throw new WatchlistError("already in watchlist");
     }
     throw err;
@@ -60,32 +45,17 @@ export async function removeFromWatchlist(
   userId: string,
   anilistId: number,
 ): Promise<void> {
-  const animeId = await resolveAnimeId(anilistId);
   await prisma.watchEntry.deleteMany({
-    where: { userId, animeId },
+    where: { userId, anilistId },
   });
 }
 
 export async function getWatchEntry(userId: string, anilistId: number) {
-  const anime = await prisma.anime.findUnique({ where: { anilistId } });
-  if (!anime) return null;
   return prisma.watchEntry.findUnique({
-    where: { userId_animeId: { userId, animeId: anime.id } },
+    where: { userId_anilistId: { userId, anilistId } },
     include: {
-      anime: true,
       episodeWatches: { orderBy: [{ episode: "asc" }] },
     },
-  });
-}
-
-async function applyTransition(
-  entryId: string,
-  current: WatchStatus,
-  transition: { from: WatchStatus; to: WatchStatus; reason: string },
-): Promise<void> {
-  await prisma.watchEntry.update({
-    where: { id: entryId },
-    data: { status: transition.to },
   });
 }
 
@@ -94,13 +64,13 @@ export async function markEpisodeWatched(
   anilistId: number,
   seasonOrEpisode: number,
   episodeMaybe?: number,
+  total?: number | null,
 ): Promise<void> {
   const episode = episodeMaybe !== undefined ? episodeMaybe : seasonOrEpisode;
-  const animeId = await resolveAnimeId(anilistId);
   return prisma.$transaction(async (tx) => {
     const before = await tx.watchEntry.findUnique({
-      where: { userId_animeId: { userId, animeId } },
-      include: { anime: true, episodeWatches: true },
+      where: { userId_anilistId: { userId, anilistId } },
+      include: { episodeWatches: true },
     });
     if (!before) {
       throw new WatchlistError("Anime não está na sua watchlist");
@@ -116,15 +86,15 @@ export async function markEpisodeWatched(
     });
 
     const after = await tx.watchEntry.findUnique({
-      where: { userId_animeId: { userId, animeId } },
-      include: { anime: true, episodeWatches: true },
+      where: { userId_anilistId: { userId, anilistId } },
+      include: { episodeWatches: true },
     });
     if (!after) return;
 
     const transition = computeNextStatus(before.status as WatchStatus, {
       type: "markEpisode",
       distinctWatched: distinctCount(after),
-      total: after.anime.episodeCount,
+      total: total ?? null,
     });
     if (transition) {
       await tx.watchEntry.update({
@@ -140,10 +110,9 @@ export async function setWatchStatus(
   anilistId: number,
   to: WatchStatus,
 ): Promise<void> {
-  const animeId = await resolveAnimeId(anilistId);
   const entry = await prisma.watchEntry.findUnique({
-    where: { userId_animeId: { userId, animeId } },
-    include: { anime: true, episodeWatches: true },
+    where: { userId_anilistId: { userId, anilistId } },
+    include: { episodeWatches: true },
   });
   if (!entry) {
     throw new WatchlistError("Anime não está na sua watchlist");
@@ -153,7 +122,10 @@ export async function setWatchStatus(
     to,
   });
   if (transition) {
-    await applyTransition(entry.id, entry.status as WatchStatus, transition);
+    await prisma.watchEntry.update({
+      where: { id: entry.id },
+      data: { status: transition.to },
+    });
   }
 }
 
@@ -175,13 +147,13 @@ export async function removeEpisodeWatch(
   anilistId: number,
   seasonOrEpisode: number,
   episodeMaybe?: number,
+  total?: number | null,
 ): Promise<boolean> {
   const episode = episodeMaybe !== undefined ? episodeMaybe : seasonOrEpisode;
-  const animeId = await resolveAnimeId(anilistId);
   return prisma.$transaction(async (tx) => {
     const entry = await tx.watchEntry.findUnique({
-      where: { userId_animeId: { userId, animeId } },
-      include: { anime: true, episodeWatches: true },
+      where: { userId_anilistId: { userId, anilistId } },
+      include: { episodeWatches: true },
     });
     if (!entry) {
       throw new WatchlistError("Anime não está na sua watchlist");
@@ -203,7 +175,7 @@ export async function removeEpisodeWatch(
     const transition = computeNextStatus(entry.status as WatchStatus, {
       type: "removeEpisode",
       distinctWatched: distinctCount({ ...entry, episodeWatches: remainingWatches } as EntryWithRelations),
-      total: entry.anime.episodeCount,
+      total: total ?? null,
     });
     if (transition) {
       await tx.watchEntry.update({
@@ -222,7 +194,6 @@ export async function listWatchEntries(
   const take = Math.min(opts.take || 50, 50);
   return prisma.watchEntry.findMany({
     where: { userId },
-    include: { anime: true },
     orderBy: { createdAt: "desc" },
     take,
     ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),

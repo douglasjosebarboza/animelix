@@ -4,7 +4,6 @@ import { Prisma } from "@prisma/client";
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: { delete: vi.fn() },
-    anime: { findUnique: vi.fn() },
     watchEntry: { findUnique: vi.fn(), findMany: vi.fn() },
   },
 }));
@@ -14,7 +13,6 @@ import { getWatchEntry, listWatchEntries } from "@/lib/watchlist";
 import { deleteAccount } from "@/lib/account";
 
 const userDelete = vi.mocked(prisma.user.delete);
-const animeFind = vi.mocked(prisma.anime.findUnique);
 const entryFind = vi.mocked(prisma.watchEntry.findUnique);
 const entryFindMany = vi.mocked(prisma.watchEntry.findMany);
 
@@ -47,7 +45,6 @@ describe("account deletion", () => {
 
 describe("cross-user isolation (authorization by construction)", () => {
   it("getWatchEntry scopes the query by userId", async () => {
-    animeFind.mockResolvedValue({ id: "anime-1", anilistId: 123 } as never);
     entryFind.mockResolvedValue(null);
 
     const result = await getWatchEntry("userA", 123);
@@ -55,7 +52,7 @@ describe("cross-user isolation (authorization by construction)", () => {
     expect(result).toBeNull();
     expect(entryFind).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId_animeId: { userId: "userA", animeId: "anime-1" } },
+        where: { userId_anilistId: { userId: "userA", anilistId: 123 } },
       }),
     );
   });
@@ -69,7 +66,6 @@ describe("cross-user isolation (authorization by construction)", () => {
   });
 
   it("a different user's query is scoped to their own userId", async () => {
-    animeFind.mockResolvedValue({ id: "anime-1", anilistId: 123 } as never);
     entryFind.mockResolvedValue(null);
 
     const result = await getWatchEntry("userB", 123);
@@ -77,7 +73,7 @@ describe("cross-user isolation (authorization by construction)", () => {
     expect(result).toBeNull();
     expect(entryFind).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId_animeId: { userId: "userB", animeId: "anime-1" } },
+        where: { userId_anilistId: { userId: "userB", anilistId: 123 } },
       }),
     );
   });

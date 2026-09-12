@@ -6,4 +6,5 @@ it("passes take and cursor", async ()=>{
   const spy=vi.mocked(prisma.watchEntry.findMany).mockResolvedValue([]);
   await listWatchEntries("u1",{take:20, cursor:"abc"});
   expect(spy).toHaveBeenCalledWith(expect.objectContaining({take:20, cursor:{id:"abc"}}));
+  expect(spy).toHaveBeenCalledWith(expect.not.objectContaining({ include: expect.anything() }));
 });
