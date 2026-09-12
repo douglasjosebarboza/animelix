@@ -16,10 +16,14 @@ import {
 } from "@/lib/watchlist";
 import type { WatchStatus } from "@/lib/watchstatus";
 
-export function parseTotal(value: FormDataEntryValue | null): number | null {
+export function parsePositiveInt(value: FormDataEntryValue | null): number | null {
   if (value == null || value === "") return null;
   const n = Number(value);
-  return Number.isFinite(n) ? n : null;
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+export function parseTotal(value: FormDataEntryValue | null): number | null {
+  return parsePositiveInt(value);
 }
 
 async function requireUserId(): Promise<string> {
@@ -34,7 +38,8 @@ async function requireUserId(): Promise<string> {
 
 export async function addToWatchlistAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
-  const anilistId = Number(formData.get("anilistId"));
+  const anilistId = parsePositiveInt(formData.get("anilistId"));
+  if (anilistId == null) redirect("/");
   try {
     await addToWatchlist(userId, anilistId);
   } catch (err) {
@@ -48,16 +53,19 @@ export async function addToWatchlistAction(formData: FormData): Promise<void> {
 
 export async function removeFromWatchlistAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
-  const anilistId = Number(formData.get("anilistId"));
+  const anilistId = parsePositiveInt(formData.get("anilistId"));
+  if (anilistId == null) redirect("/watchlist");
   await removeFromWatchlist(userId, anilistId);
   redirect("/watchlist");
 }
 
 export async function markEpisodeAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
-  const anilistId = Number(formData.get("anilistId"));
-  const season = Number(formData.get("season"));
-  const episode = Number(formData.get("episode"));
+  const anilistId = parsePositiveInt(formData.get("anilistId"));
+  if (anilistId == null) redirect("/watchlist");
+  const season = parsePositiveInt(formData.get("season"));
+  const episode = parsePositiveInt(formData.get("episode"));
+  if (season == null || episode == null) redirect(`/watchlist/${anilistId}`);
   const total = parseTotal(formData.get("total"));
   try {
     await markEpisodeWatched(userId, anilistId, season, episode, total);
@@ -72,9 +80,11 @@ export async function markEpisodeAction(formData: FormData): Promise<void> {
 
 export async function removeEpisodeAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
-  const anilistId = Number(formData.get("anilistId"));
-  const season = Number(formData.get("season"));
-  const episode = Number(formData.get("episode"));
+  const anilistId = parsePositiveInt(formData.get("anilistId"));
+  if (anilistId == null) redirect("/watchlist");
+  const season = parsePositiveInt(formData.get("season"));
+  const episode = parsePositiveInt(formData.get("episode"));
+  if (season == null || episode == null) redirect(`/watchlist/${anilistId}`);
   const total = parseTotal(formData.get("total"));
   const entryRemoved = await removeEpisodeWatch(userId, anilistId, season, episode, total);
   // Removing the last watched episode deletes the entry; sending the user back
@@ -88,7 +98,8 @@ const STATUSES: WatchStatus[] = ["watching", "completed"];
 
 export async function setWatchStatusAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
-  const anilistId = Number(formData.get("anilistId"));
+  const anilistId = parsePositiveInt(formData.get("anilistId"));
+  if (anilistId == null) redirect("/watchlist");
   const status = String(formData.get("status") ?? "") as WatchStatus;
   if (!STATUSES.includes(status)) {
     throw new Error(`status inválido: ${status}`);
@@ -99,7 +110,8 @@ export async function setWatchStatusAction(formData: FormData): Promise<void> {
 
 export async function setAutoPauseAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
-  const anilistId = Number(formData.get("anilistId"));
+  const anilistId = parsePositiveInt(formData.get("anilistId"));
+  if (anilistId == null) redirect("/watchlist");
   const enabled = formData.get("enabled") === "on";
   await setAutoPause(userId, anilistId, enabled);
   revalidatePath(`/anime/${anilistId}`);
