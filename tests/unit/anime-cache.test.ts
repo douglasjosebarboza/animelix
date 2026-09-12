@@ -18,7 +18,7 @@ beforeEach(() => vi.clearAllMocks());
 describe("anime-cache", () => {
   it("delega getById ao catalog e retorna o seed", async () => {
     vi.mocked(catalog.getById).mockResolvedValue({
-      anilistId: 21, title: "One Piece", coverImageUrl: null, episodeCount: null, seasonCount: null,
+      anilistId: 21, title: "One Piece", coverImageUrl: null, episodeCount: null, seasonCount: null, description: null, episodeTitles: [],
     });
     const seed = await getCachedAnimeById(21);
     expect(seed.title).toBe("One Piece");
