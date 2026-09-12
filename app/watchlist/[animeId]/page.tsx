@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { requireUser } from "@/auth";
 import { getWatchEntry } from "@/lib/watchlist";
+import { getCachedAnimeById } from "@/lib/anime-cache";
 import { computeProgress } from "@/lib/progress";
 import {
   markEpisodeAction,
@@ -23,10 +24,13 @@ export default async function WatchEntryPage({
 
   const { error } = await searchParams;
 
-  const entry = await getWatchEntry(user.id, anilistId);
+  const [entry, seed] = await Promise.all([
+    getWatchEntry(user.id, anilistId),
+    getCachedAnimeById(anilistId).catch(() => null),
+  ]);
   if (!entry) notFound();
-
-  const total = entry.anime.episodeCount;
+  const anime = seed ?? { title: `Anime ${anilistId}` };
+  const total = seed?.episodeCount ?? null;
   const progress = computeProgress(entry.episodeWatches, total);
 
   const watchedSet = new Set<number>(entry.episodeWatches.map((ew) => ew.episode));
@@ -41,7 +45,7 @@ export default async function WatchEntryPage({
           )}
           <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gradient">{entry.anime.title}</h1>
+            <h1 className="text-3xl font-bold text-gradient">{anime.title}</h1>
             <p className="mt-1 text-base text-muted">
               {progress.watchedCount} de {total ?? "?"} episódios assistidos
             </p>
@@ -80,6 +84,7 @@ export default async function WatchEntryPage({
                       <input type="hidden" name="anilistId" value={anilistId} />
                       <input type="hidden" name="season" value={1} />
                       <input type="hidden" name="episode" value={ep} />
+                      <input type="hidden" name="total" value={total ?? ""} />
                       <button
                         type="submit"
                         aria-label={`remover episódio ${ep}`}
@@ -93,6 +98,7 @@ export default async function WatchEntryPage({
                       <input type="hidden" name="anilistId" value={anilistId} />
                       <input type="hidden" name="season" value={1} />
                       <input type="hidden" name="episode" value={ep} />
+                      <input type="hidden" name="total" value={total ?? ""} />
                       <button
                         type="submit"
                         aria-label={`marcar episódio ${ep}`}

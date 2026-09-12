@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { requireUser } from "@/auth";
 import { listWatchEntries } from "@/lib/watchlist";
+import { getCachedAnimeById } from "@/lib/anime-cache";
 import {
   removeFromWatchlistAction,
   deleteAccountAction,
@@ -21,11 +22,19 @@ export default async function WatchlistPage({
   const user = await requireUser();
   const { cursor } = (await searchParams) ?? {};
   const entries = await listWatchEntries(user.id, { take: 20, cursor });
-  const byStatus = new Map<string, typeof entries>();
-  for (const entry of entries) {
-    const list = byStatus.get(entry.status) ?? [];
-    list.push(entry);
-    byStatus.set(entry.status, list);
+  const seeds = await Promise.allSettled(entries.map((e) => getCachedAnimeById(e.anilistId)));
+  const cards = entries.map((entry, i) => {
+    const s = seeds[i];
+    const anime = s.status === "fulfilled"
+      ? s.value
+      : { anilistId: entry.anilistId, title: `Anime ${entry.anilistId}`, coverImageUrl: null as string | null, episodeCount: null as number | null, seasonCount: null as number | null };
+    return { entry, anime, unavailable: s.status === "rejected" };
+  });
+  const byStatus = new Map<string, typeof cards>();
+  for (const card of cards) {
+    const list = byStatus.get(card.entry.status) ?? [];
+    list.push(card);
+    byStatus.set(card.entry.status, list);
   }
 
   return (
@@ -49,6 +58,11 @@ export default async function WatchlistPage({
           </p>
         ) : (
           <>
+            {cards.length > 0 && cards.every((c) => c.unavailable) && (
+              <p className="mt-6 rounded-md border border-amber-700 bg-amber-950 p-3 text-base text-amber-300">
+                Não foi possível carregar os detalhes na AniList agora. Seu progresso está salvo.
+              </p>
+            )}
             <div className="mt-6 space-y-8">
               {STATUS_ORDER.map((status) => {
                 const group = byStatus.get(status);
@@ -59,19 +73,19 @@ export default async function WatchlistPage({
                       {STATUS_LABEL[status]} ({group.length})
                     </h2>
                     <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                      {group.map((entry) => (
+                      {group.map(({ entry, anime, unavailable }) => (
                         <li
                           key={entry.id}
                           className="group overflow-hidden rounded-2xl border border-border bg-surface transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/20"
                         >
                           <a
-                            href={`/watchlist/${entry.anime.anilistId}`}
+                            href={`/watchlist/${anime.anilistId}`}
                             className="block cursor-pointer"
                           >
-                            {entry.anime.coverImageUrl && (
+                            {anime.coverImageUrl && (
                               <Image
-                                src={entry.anime.coverImageUrl}
-                                alt={entry.anime.title}
+                                src={anime.coverImageUrl}
+                                alt={anime.title}
                                 width={230}
                                 height={345}
                                 sizes="(max-width:640px) 50vw, 25vw"
@@ -81,8 +95,13 @@ export default async function WatchlistPage({
                             )}
                             <div className="p-3">
                               <p className="line-clamp-2 text-base font-medium text-foreground">
-                                {entry.anime.title}
+                                {anime.title}
                               </p>
+                              {unavailable && (
+                                <p className="mt-1 text-sm text-amber-300">
+                                  Detalhes indisponíveis agora (AniList instável).
+                                </p>
+                              )}
                               <p className="mt-1 text-sm capitalize text-accent">
                                 {entry.status === "watching"
                                   ? "assistindo"
@@ -95,7 +114,7 @@ export default async function WatchlistPage({
                               <input
                                 type="hidden"
                                 name="anilistId"
-                                value={entry.anime.anilistId}
+                                value={anime.anilistId}
                               />
                               <button
                                 type="submit"

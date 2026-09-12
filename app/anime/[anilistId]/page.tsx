@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { catalog } from "@/lib/catalog";
+import { getCachedAnimeById } from "@/lib/anime-cache";
 import { getWatchEntry } from "@/lib/watchlist";
 import { refreshAnimeAction } from "@/lib/anime-actions";
 import { addToWatchlistAction } from "@/lib/watchlist-actions";
@@ -28,7 +28,7 @@ export default async function AnimePage({
 
   let anime;
   try {
-    anime = await catalog.getById(anilistId);
+    anime = await getCachedAnimeById(anilistId);
   } catch (err) {
     return (
       <main className="flex-1 bg-background p-8 text-foreground">
