@@ -21,28 +21,25 @@ test("add to watchlist -> toggle Assistido -> remove", async ({ page }) => {
   await page.goto("/anime/1");
   await expect(page.getByRole("heading", { name: /Cowboy Bebop/i })).toBeVisible();
 
-  // Add to watchlist
-  await page.getByRole("button", { name: /add to watchlist/i }).click();
+  // Mark episode 1 -> auto-adds to watchlist
+  await page.getByRole("button", { name: "Assistido", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "✓ Assistido" })).toBeVisible();
   await expect(page).toHaveURL(/\/anime\/\d+/);
   const watchId = page.url().match(/\/anime\/(\d+)/)![1];
 
   // Initially watching (assistindo)
   await expect(page.locator("p", { hasText: "Status:" })).toContainText(/assistindo/i);
 
-  // Toggle episode 1 -> Assistido
+  // Mark episode 2 as well
   await page.getByRole("button", { name: "Assistido", exact: true }).first().click();
-  await expect(page.getByRole("button", { name: "✓ Assistido" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "✓ Assistido" })).toHaveCount(2);
 
-  // Toggle again -> back to not watched (Assistido ghost)
+  // Unmark episode 1 -> entry kept (episode 2 still watched)
   await page.getByRole("button", { name: "✓ Assistido" }).first().click();
-  await expect(page.getByRole("button", { name: "Assistido", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "✓ Assistido" })).toHaveCount(1);
 
-  // Mark again then remove via Remover entry
-  await page.getByRole("button", { name: "Assistido", exact: true }).first().click();
-  await expect(page.getByRole("button", { name: "✓ Assistido" })).toBeVisible();
-  // Remove the only watched episode -> entry deleted -> redirect to watchlist
+  // Remove the last watched episode -> entry deleted -> redirect to watchlist
   await page.getByRole("button", { name: "✓ Assistido" }).first().click();
-  // After removing last, may still have entry if more than one? But we toggled one, removing leaves 0 -> delete
   // Wait for redirect
   await expect(page).toHaveURL(/\/watchlist$/);
   await expect(page.locator(`a[href="/anime/${watchId}"]`)).toHaveCount(0);
@@ -65,7 +62,7 @@ test("watchlist groups entries by status", async ({ page }) => {
 
   await page.goto("/anime/2");
   await expect(page.getByRole("heading", { name: /Frieren/i })).toBeVisible();
-  await page.getByRole("button", { name: /add to watchlist/i }).click();
+  await page.getByRole("button", { name: "Assistido", exact: true }).first().click();
   await expect(page).toHaveURL(/\/anime\/\d+/);
 
   // New entry starts as assistindo

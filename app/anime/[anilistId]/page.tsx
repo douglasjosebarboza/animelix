@@ -4,9 +4,7 @@ import { auth } from "@/auth";
 import { getCachedAnimeById } from "@/lib/anime-cache";
 import { getWatchEntry } from "@/lib/watchlist";
 import { computeProgress } from "@/lib/progress";
-import { refreshAnimeAction } from "@/lib/anime-actions";
 import {
-  addToWatchlistAction,
   markEpisodeAction,
   removeEpisodeAction,
   removeFromWatchlistAction,
@@ -100,8 +98,8 @@ export default async function AnimePage({
               </>
             )}
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {entry ? (
+            {entry && (
+              <div className="mt-4 flex flex-wrap gap-2">
                 <form action={removeFromWatchlistAction}>
                   <input type="hidden" name="anilistId" value={anilistId} />
                   <button
@@ -111,28 +109,8 @@ export default async function AnimePage({
                     Remover
                   </button>
                 </form>
-              ) : (
-                <form action={addToWatchlistAction}>
-                  <input type="hidden" name="anilistId" value={anilistId} />
-                  <button
-                    type="submit"
-                    className="cursor-pointer btn-anime rounded-md px-4 py-2 text-base font-medium"
-                  >
-                    Add to watchlist
-                  </button>
-                </form>
-              )}
-
-              <form action={refreshAnimeAction}>
-                <input type="hidden" name="anilistId" value={anilistId} />
-                <button
-                  type="submit"
-                  className="cursor-pointer btn-ghost rounded-md px-4 py-2 text-base"
-                >
-                  Refresh from AniList
-                </button>
-              </form>
-            </div>
+              </div>
+            )}
           </div>
         </div>
 

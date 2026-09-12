@@ -17,13 +17,12 @@ test("cross-user cannot see another user's watch progress", async ({ page }) => 
   const aEmail = `e2e+${Date.now()}-a@animelix.test`;
   const bEmail = `e2e+${Date.now()}-b@animelix.test`;
 
-  // User A adds an anime, marks episode 1 and lands on the anime page
+  // User A marks episode 1 (auto-adds) and lands on the anime page
   await signUp(page, aEmail);
   await page.goto("/anime/1");
   await expect(page.getByRole("heading", { name: /Cowboy Bebop/i })).toBeVisible();
-  await page.getByRole("button", { name: /add to watchlist/i }).click();
-  await expect(page).toHaveURL(/\/anime\/\d+/);
   await page.getByRole("button", { name: "Assistido", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/anime\/\d+/);
   await expect(page.getByRole("button", { name: "✓ Assistido" })).toBeVisible();
   const aUrl = page.url();
 
@@ -33,11 +32,12 @@ test("cross-user cannot see another user's watch progress", async ({ page }) => 
   await expect(page.getByRole("link", { name: "Entrar" })).toBeVisible();
 
   // User B logs in and opens the same anime page -> sees a fresh state:
-  // Add button visible, no watched episodes from A
+  // no watched episodes from A, no entry controls (no Remover/Status)
   await signUp(page, bEmail);
   await page.goto(aUrl);
-  await expect(page.getByRole("button", { name: /add to watchlist/i })).toBeVisible();
   await expect(page.getByRole("button", { name: "✓ Assistido" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Remover", exact: true })).toHaveCount(0);
+  await expect(page.locator("p", { hasText: "Status:" })).toHaveCount(0);
 });
 
 test("deleting the account logs the user out and invalidates the session", async ({

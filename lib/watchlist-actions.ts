@@ -6,7 +6,6 @@ import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { deleteAccount } from "@/lib/account";
 import {
-  addToWatchlist,
   removeFromWatchlist,
   markEpisodeWatched,
   removeEpisodeWatch,
@@ -22,21 +21,6 @@ async function requireUserId(): Promise<string> {
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user) redirect("/login");
   return session.user.id;
-}
-
-export async function addToWatchlistAction(formData: FormData): Promise<void> {
-  const userId = await requireUserId();
-  const anilistId = parsePositiveInt(formData.get("anilistId"));
-  if (anilistId == null) redirect("/");
-  try {
-    await addToWatchlist(userId, anilistId);
-  } catch (err) {
-    if (err instanceof WatchlistError) {
-      redirect(`/anime/${anilistId}?error=already_in_watchlist`);
-    }
-    throw err;
-  }
-  redirect(`/anime/${anilistId}`);
 }
 
 export async function removeFromWatchlistAction(formData: FormData): Promise<void> {
