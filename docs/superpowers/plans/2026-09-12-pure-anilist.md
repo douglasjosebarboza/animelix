@@ -200,7 +200,8 @@ describe("watchlist pura (sem Anime)", () => {
 
   it("markEpisode completa quando atinge o total vindo da API", async () => {
     const before = { id: "e1", status: "watching", episodeWatches: [] };
-    const after = { id: "e1", status: "watching", episodeWatches: [{ id: "w1", episode: 12 }] };
+    // Transição usa distinct-count: precisa de 12 watches distintos para total 12.
+    const after = { id: "e1", status: "watching", episodeWatches: Array.from({ length: 12 }, (_, i) => ({ id: `w${i + 1}`, episode: i + 1 })) };
     vi.mocked(prisma.watchEntry.findUnique)
       .mockResolvedValueOnce(before as never)
       .mockResolvedValueOnce(after as never);
