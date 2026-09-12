@@ -13,16 +13,18 @@ async function signUp(page: import("@playwright/test").Page, email: string) {
   await expect(page).toHaveURL(/\/watchlist/);
 }
 
-test("cross-user cannot access another user's watchlist entry (404)", async ({ page }) => {
+test("cross-user cannot see another user's watch progress", async ({ page }) => {
   const aEmail = `e2e+${Date.now()}-a@animelix.test`;
   const bEmail = `e2e+${Date.now()}-b@animelix.test`;
 
-  // User A adds an anime and lands on their watchlist entry
+  // User A adds an anime, marks episode 1 and lands on the anime page
   await signUp(page, aEmail);
   await page.goto("/anime/1");
   await expect(page.getByRole("heading", { name: /Cowboy Bebop/i })).toBeVisible();
   await page.getByRole("button", { name: /add to watchlist/i }).click();
-  await expect(page).toHaveURL(/\/watchlist\/\d+/);
+  await expect(page).toHaveURL(/\/anime\/\d+/);
+  await page.getByRole("button", { name: "Assistido", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "✓ Assistido" })).toBeVisible();
   const aUrl = page.url();
 
   // User A signs out
@@ -30,10 +32,12 @@ test("cross-user cannot access another user's watchlist entry (404)", async ({ p
   await page.getByRole("button", { name: "Sair" }).click();
   await expect(page.getByRole("link", { name: "Entrar" })).toBeVisible();
 
-  // User B logs in and tries to open A's entry -> must 404, not reveal it
+  // User B logs in and opens the same anime page -> sees a fresh state:
+  // Add button visible, no watched episodes from A
   await signUp(page, bEmail);
   await page.goto(aUrl);
-  await expect(page.getByText(/404/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /add to watchlist/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: "✓ Assistido" })).toHaveCount(0);
 });
 
 test("deleting the account logs the user out and invalidates the session", async ({

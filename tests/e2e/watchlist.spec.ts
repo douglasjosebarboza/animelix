@@ -23,8 +23,8 @@ test("add to watchlist -> toggle Assistido -> remove", async ({ page }) => {
 
   // Add to watchlist
   await page.getByRole("button", { name: /add to watchlist/i }).click();
-  await expect(page).toHaveURL(/\/watchlist\/\d+/);
-  const watchId = page.url().match(/\/watchlist\/(\d+)/)![1];
+  await expect(page).toHaveURL(/\/anime\/\d+/);
+  const watchId = page.url().match(/\/anime\/(\d+)/)![1];
 
   // Initially watching (assistindo)
   await expect(page.locator("p", { hasText: "Status:" })).toContainText(/assistindo/i);
@@ -45,7 +45,7 @@ test("add to watchlist -> toggle Assistido -> remove", async ({ page }) => {
   // After removing last, may still have entry if more than one? But we toggled one, removing leaves 0 -> delete
   // Wait for redirect
   await expect(page).toHaveURL(/\/watchlist$/);
-  await expect(page.locator(`a[href="/watchlist/${watchId}"]`)).toHaveCount(0);
+  await expect(page.locator(`a[href="/anime/${watchId}"]`)).toHaveCount(0);
 });
 
 test("watchlist groups entries by status", async ({ page }) => {
@@ -66,7 +66,7 @@ test("watchlist groups entries by status", async ({ page }) => {
   await page.goto("/anime/2");
   await expect(page.getByRole("heading", { name: /Frieren/i })).toBeVisible();
   await page.getByRole("button", { name: /add to watchlist/i }).click();
-  await expect(page).toHaveURL(/\/watchlist\/\d+/);
+  await expect(page).toHaveURL(/\/anime\/\d+/);
 
   // New entry starts as assistindo
   await expect(page.getByText(/Status: assistindo/i)).toBeVisible();

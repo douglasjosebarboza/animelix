@@ -11,6 +11,7 @@ vi.mock("@/lib/prisma", () => ({
       fn({
         watchEntry: {
           findUnique: vi.mocked(prisma.watchEntry.findUnique),
+          create: vi.mocked(prisma.watchEntry.create),
           update: vi.mocked(prisma.watchEntry.update),
         },
         episodeWatch: { create: vi.mocked(prisma.episodeWatch.create) },
@@ -62,5 +63,17 @@ describe("watchlist pura (sem Anime)", () => {
       .mockResolvedValueOnce(after as never);
     await markEpisodeWatched("user-1", 123, 1, 5, null);
     expect(prisma.watchEntry.update).not.toHaveBeenCalled();
+  });
+
+  it("markEpisode auto-adiciona o anime quando não há entry", async () => {
+    const after = { id: "e9", status: "watching", episodeWatches: [{ id: "w1", episode: 1 }] };
+    vi.mocked(prisma.watchEntry.findUnique)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(after as never);
+    vi.mocked(prisma.watchEntry.create).mockResolvedValue({ id: "e9", status: "watching" } as never);
+    await markEpisodeWatched("user-1", 123, 1, 1, 12);
+    expect(prisma.watchEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { userId: "user-1", anilistId: 123, status: "watching" } }),
+    );
   });
 });

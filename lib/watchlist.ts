@@ -68,12 +68,28 @@ export async function markEpisodeWatched(
 ): Promise<void> {
   const episode = episodeMaybe !== undefined ? episodeMaybe : seasonOrEpisode;
   return prisma.$transaction(async (tx) => {
-    const before = await tx.watchEntry.findUnique({
+    const found = await tx.watchEntry.findUnique({
       where: { userId_anilistId: { userId, anilistId } },
       include: { episodeWatches: true },
     });
+    // Marcar o primeiro episódio auto-adiciona o anime à watchlist.
+    let before = found;
     if (!before) {
-      throw new WatchlistError("Anime não está na sua watchlist");
+      try {
+        const created = await tx.watchEntry.create({
+          data: { userId, anilistId, status: "watching" },
+        });
+        before = { ...created, episodeWatches: [] };
+      } catch (err) {
+        // Corrida com outro mark/add concorrente: recarrega o entry vencedor.
+        if ((err as { code?: string }).code !== "P2002") throw err;
+        const retry = await tx.watchEntry.findUnique({
+          where: { userId_anilistId: { userId, anilistId } },
+          include: { episodeWatches: true },
+        });
+        if (!retry) throw new WatchlistError("Anime não está na sua watchlist");
+        before = retry;
+      }
     }
 
     const alreadyWatched = findEpisodeWatch(before.episodeWatches, episode);

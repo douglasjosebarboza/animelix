@@ -39,7 +39,7 @@ export async function addToWatchlistAction(formData: FormData): Promise<void> {
     }
     throw err;
   }
-  redirect(`/watchlist/${anilistId}`);
+  redirect(`/anime/${anilistId}`);
 }
 
 export async function removeFromWatchlistAction(formData: FormData): Promise<void> {
@@ -56,17 +56,17 @@ export async function markEpisodeAction(formData: FormData): Promise<void> {
   if (anilistId == null) redirect("/watchlist");
   const season = parsePositiveInt(formData.get("season"));
   const episode = parsePositiveInt(formData.get("episode"));
-  if (season == null || episode == null) redirect(`/watchlist/${anilistId}`);
+  if (season == null || episode == null) redirect(`/anime/${anilistId}`);
   const total = parseTotal(formData.get("total"));
   try {
     await markEpisodeWatched(userId, anilistId, season, episode, total);
   } catch (err) {
     if (err instanceof WatchlistError) {
-      redirect(`/watchlist/${anilistId}?error=${encodeURIComponent(err.message)}`);
+      redirect(`/anime/${anilistId}?error=${encodeURIComponent(err.message)}`);
     }
     throw err;
   }
-  revalidatePath(`/watchlist/${anilistId}`);
+  revalidatePath(`/anime/${anilistId}`);
 }
 
 export async function removeEpisodeAction(formData: FormData): Promise<void> {
@@ -75,14 +75,13 @@ export async function removeEpisodeAction(formData: FormData): Promise<void> {
   if (anilistId == null) redirect("/watchlist");
   const season = parsePositiveInt(formData.get("season"));
   const episode = parsePositiveInt(formData.get("episode"));
-  if (season == null || episode == null) redirect(`/watchlist/${anilistId}`);
+  if (season == null || episode == null) redirect(`/anime/${anilistId}`);
   const total = parseTotal(formData.get("total"));
   const entryRemoved = await removeEpisodeWatch(userId, anilistId, season, episode, total);
   // Removing the last watched episode deletes the entry; sending the user back
-  // to the watchlist avoids re-rendering the now-deleted entry page (which would
-  // surface notFound() as an error during the action's revalidation).
+  // to the watchlist keeps them on a page that still makes sense without it.
   if (entryRemoved) redirect("/watchlist");
-  revalidatePath(`/watchlist/${anilistId}`);
+  revalidatePath(`/anime/${anilistId}`);
 }
 
 const STATUSES: WatchStatus[] = ["watching", "completed"];
@@ -96,7 +95,7 @@ export async function setWatchStatusAction(formData: FormData): Promise<void> {
     throw new Error(`status inválido: ${status}`);
   }
   await setWatchStatus(userId, anilistId, status);
-  revalidatePath(`/watchlist/${anilistId}`);
+  revalidatePath(`/anime/${anilistId}`);
 }
 
 export async function setAutoPauseAction(formData: FormData): Promise<void> {
@@ -106,7 +105,6 @@ export async function setAutoPauseAction(formData: FormData): Promise<void> {
   const enabled = formData.get("enabled") === "on";
   await setAutoPause(userId, anilistId, enabled);
   revalidatePath(`/anime/${anilistId}`);
-  revalidatePath(`/watchlist/${anilistId}`);
 }
 
 export async function deleteAccountAction(): Promise<void> {

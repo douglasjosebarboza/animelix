@@ -79,7 +79,7 @@ export default async function WatchlistPage({
                           className="group overflow-hidden rounded-2xl border border-border bg-surface transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/20"
                         >
                           <a
-                            href={`/watchlist/${anime.anilistId}`}
+                            href={`/anime/${anime.anilistId}`}
                             className="block cursor-pointer"
                           >
                             {anime.coverImageUrl && (
