@@ -67,7 +67,11 @@ async function request<T>(query: string, variables: Record<string, unknown>): Pr
     try {
       res = await fetch(anilistEndpoint(), {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: { 
+          "Content-Type": "application/json", 
+          "Accept": "application/json",
+          "User-Agent": "Animelix/1.0"
+        },
         body: JSON.stringify({ query, variables }),
       });
     } catch (cause) {
@@ -148,14 +152,6 @@ export function currentSeason(now: Date = new Date()): SeasonRef {
   return { season: "FALL", year };
 }
 
-export type SeasonalAnime = {
-  anilistId: number;
-  title: string;
-  coverImageUrl: string | null;
-  episodeCount: number | null;
-  averageScore: number | null;
-  genres: string[];
-};
 
 const SEASONAL_QUERY = `
   query Seasonal($season: MediaSeason, $seasonYear: Int, $genre: [String], $perPage: Int) {
@@ -179,44 +175,19 @@ const SEASONAL_QUERY = `
   }
 `;
 
-function mapSeasonal(m: RawMedia): SeasonalAnime {
-  return {
-    anilistId: m.id,
-    title: pickTitle(m.title),
-    coverImageUrl: m.coverImage?.large ?? null,
-    episodeCount: m.episodes ?? null,
-    averageScore: m.averageScore ?? null,
-    genres: m.genres ?? [],
-  };
-}
-
 export async function getSeasonalAnime(opts: {
   season: Season;
   seasonYear: number;
   genre?: string;
   perPage?: number;
-}): Promise<SeasonalAnime[]> {
+}): Promise<AnimeSeed[]> {
   const data = await request<{ Page: { media: RawMedia[] } }>(SEASONAL_QUERY, {
     season: opts.season,
     seasonYear: opts.seasonYear,
     genre: opts.genre ? [opts.genre] : undefined,
     perPage: opts.perPage ?? 30,
   });
-  return (data.Page?.media ?? []).map(mapSeasonal);
+  return (data.Page?.media ?? []).map(mapMedia);
 }
 
-import type { AnimeDataSource, Seed } from "./datasource";
-export class AnilistAdapter implements AnimeDataSource {
-  async search(q: string): Promise<Seed[]> {
-    const r = await searchAnime(q);
-    return r.map((s) => ({ anilistId: s.anilistId, title: s.title, coverImageUrl: s.coverImageUrl, episodeCount: s.episodeCount }));
-  }
-  async getById(id: number): Promise<Seed> {
-    const s = await getAnimeById(id);
-    return { anilistId: s.anilistId, title: s.title, coverImageUrl: s.coverImageUrl, episodeCount: s.episodeCount };
-  }
-  async getSeasonal(season: Season, year: number): Promise<Seed[]> {
-    const r = await getSeasonalAnime({ season, seasonYear: year });
-    return r.map((s) => ({ anilistId: s.anilistId, title: s.title, coverImageUrl: s.coverImageUrl, episodeCount: s.episodeCount }));
-  }
-}
+
