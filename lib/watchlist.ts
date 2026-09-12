@@ -191,8 +191,6 @@ export async function removeEpisodeWatch(
 
     await tx.episodeWatch.delete({ where: { id: target.id } });
 
-    // Removing the last watched episode leaves nothing tracked: drop the entry
-    // from the watchlist entirely.
     const remaining = await tx.episodeWatch.count({
       where: { watchEntryId: entry.id },
     });
@@ -201,8 +199,6 @@ export async function removeEpisodeWatch(
       return true;
     }
 
-    // Compute the post-removal state in memory: with the watched set there can be
-    // no duplicates, so the remaining row count equals the distinct count.
     const remainingWatches = entry.episodeWatches.filter((e) => e.id !== target.id);
     const transition = computeNextStatus(entry.status as WatchStatus, {
       type: "removeEpisode",
