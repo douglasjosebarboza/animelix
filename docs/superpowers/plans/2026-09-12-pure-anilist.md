@@ -594,7 +594,12 @@ git commit -m "feat: cache Next de 1h/10min sobre o catalogo AniList"
 `tests/unit/watchlist-actions.test.ts`:
 
 ```ts
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// watchlist-actions importa @/auth (next-auth → next/server quebra no vitest);
+// mocks só para carregar o módulo — asserções inalteradas.
+vi.mock("@/auth", () => ({ auth: vi.fn(), signOut: vi.fn() }));
+
 import { parseTotal } from "@/lib/watchlist-actions";
 
 describe("parseTotal", () => {
@@ -620,7 +625,7 @@ Adicionar no topo (após imports):
 
 ```ts
 export function parseTotal(value: FormDataEntryValue | null): number | null {
-  if (value == null) return null;
+  if (value == null || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
@@ -656,8 +661,8 @@ export async function refreshAnimeAction(formData: FormData): Promise<void> {
   if (!Number.isFinite(anilistId)) {
     throw new Error("anilistId inválido");
   }
-  revalidateTag(`anime:${anilistId}`);
-  revalidateTag("anime-seasonal");
+  revalidateTag(`anime:${anilistId}`, { expire: 0 });
+  revalidateTag("anime-seasonal", { expire: 0 });
   revalidatePath(`/anime/${anilistId}`);
 }
 ```
