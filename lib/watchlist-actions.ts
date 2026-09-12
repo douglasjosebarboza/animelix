@@ -16,6 +16,12 @@ import {
 } from "@/lib/watchlist";
 import type { WatchStatus } from "@/lib/watchstatus";
 
+export function parseTotal(value: FormDataEntryValue | null): number | null {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 async function requireUserId(): Promise<string> {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -52,8 +58,9 @@ export async function markEpisodeAction(formData: FormData): Promise<void> {
   const anilistId = Number(formData.get("anilistId"));
   const season = Number(formData.get("season"));
   const episode = Number(formData.get("episode"));
+  const total = parseTotal(formData.get("total"));
   try {
-    await markEpisodeWatched(userId, anilistId, season, episode);
+    await markEpisodeWatched(userId, anilistId, season, episode, total);
   } catch (err) {
     if (err instanceof WatchlistError) {
       redirect(`/watchlist/${anilistId}?error=${encodeURIComponent(err.message)}`);
@@ -68,7 +75,8 @@ export async function removeEpisodeAction(formData: FormData): Promise<void> {
   const anilistId = Number(formData.get("anilistId"));
   const season = Number(formData.get("season"));
   const episode = Number(formData.get("episode"));
-  const entryRemoved = await removeEpisodeWatch(userId, anilistId, season, episode);
+  const total = parseTotal(formData.get("total"));
+  const entryRemoved = await removeEpisodeWatch(userId, anilistId, season, episode, total);
   // Removing the last watched episode deletes the entry; sending the user back
   // to the watchlist avoids re-rendering the now-deleted entry page (which would
   // surface notFound() as an error during the action's revalidation).
