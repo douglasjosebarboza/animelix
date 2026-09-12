@@ -10,6 +10,8 @@ export type AnimeSeed = {
   coverImageUrl: string | null;
   episodeCount: number | null;
   seasonCount: number | null;
+  description: string | null;
+  episodeTitles: (string | null)[];
 };
 
 export class AnilistError extends Error {
@@ -29,10 +31,31 @@ type RawMedia = {
   episodes?: number | null;
   averageScore?: number | null;
   genres?: string[] | null;
+  description?: string | null;
+  streamingEpisodes?: { title?: string | null }[] | null;
 };
 
 function pickTitle(title: RawMedia["title"]): string {
   return title.english ?? title.romaji ?? title.native ?? "Sem título";
+}
+
+export function sanitizeDescription(html: string | null | undefined): string | null {
+  if (html == null) return null;
+  const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return text === "" ? null : text;
+}
+
+export function mapEpisodeTitles(
+  list: { title?: string | null }[] | null | undefined,
+): (string | null)[] {
+  if (!list) return [];
+  return list.map((ep, i) => {
+    const t = ep?.title?.trim();
+    if (!t) return null;
+    const prefix = new RegExp(`^episode\\s+${i + 1}\\s*[-–:]\\s*`, "i");
+    const cleaned = t.replace(prefix, "").trim();
+    return cleaned === "" ? null : cleaned;
+  });
 }
 
 function mapMedia(m: RawMedia): AnimeSeed {
@@ -44,6 +67,8 @@ function mapMedia(m: RawMedia): AnimeSeed {
     coverImageUrl: m.coverImage?.large ?? null,
     episodeCount: m.episodes ?? null,
     seasonCount: null,
+    description: sanitizeDescription(m.description),
+    episodeTitles: mapEpisodeTitles(m.streamingEpisodes),
   };
 }
 
@@ -123,6 +148,8 @@ const BY_ID_QUERY = `
       title { romaji english native }
       coverImage { large }
       episodes
+      description(asHtml: false)
+      streamingEpisodes { title }
     }
   }
 `;

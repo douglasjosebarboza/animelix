@@ -6,6 +6,8 @@ import {
   getSeasonalAnime,
   currentSeason,
   AnilistError,
+  sanitizeDescription,
+  mapEpisodeTitles,
   type SeasonRef,
 } from "@/lib/anilist";
 
@@ -46,6 +48,19 @@ beforeAll(async () => {
         if (parsed.variables.id === 0) {
           res.statusCode = 500;
           res.end("boom");
+          return;
+        }
+        if (parsed.variables.id === 99) {
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({
+            data: {
+              Media: {
+                ...media(99, "Anime 99"),
+                description: "Longa<br><br>\nsinopse aqui",
+                streamingEpisodes: [{ title: "Episode 1 - Asteroid Blues" }, { title: null }],
+              },
+            },
+          }));
           return;
         }
         res.setHeader("Content-Type", "application/json");
@@ -167,4 +182,27 @@ describe("AniList client", () => {
     });
 
   });
+
+describe("rich detail fields", () => {
+  it("sanitizeDescription remove tags e colapsa whitespace", () => {
+    expect(sanitizeDescription("A<br><br>\nB  C")).toBe("A B C");
+    expect(sanitizeDescription(null)).toBeNull();
+    expect(sanitizeDescription("  ")).toBeNull();
+  });
+
+  it("mapEpisodeTitles mapeia por posição e limpa prefixo", () => {
+    expect(
+      mapEpisodeTitles([{ title: "Episode 1 - Asteroid Blues" }, { title: null }, {}]),
+    ).toEqual(["Asteroid Blues", null, null]);
+    expect(mapEpisodeTitles(null)).toEqual([]);
+    expect(mapEpisodeTitles(undefined)).toEqual([]);
+  });
+
+  it("getAnimeById retorna description e episodeTitles", async () => {
+    const anime = await getAnimeById(99);
+    expect(anime.description).toBe("Longa sinopse aqui");
+    expect(anime.episodeTitles[0]).toBe("Asteroid Blues");
+    expect(anime.episodeTitles[1]).toBeNull();
+  });
+});
 });
