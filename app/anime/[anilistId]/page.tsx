@@ -4,10 +4,14 @@ import { auth } from "@/auth";
 import { getCachedAnimeById } from "@/lib/anime-cache";
 import { getWatchEntry } from "@/lib/watchlist";
 import { computeProgress } from "@/lib/progress";
+import { parsePositiveInt } from "@/lib/parse";
 import {
   markEpisodeAction,
   removeEpisodeAction,
   removeFromWatchlistAction,
+  markUpToAction,
+  markAllAction,
+  clearAllAction,
 } from "@/lib/watchlist-actions";
 
 export default async function AnimePage({
@@ -15,7 +19,7 @@ export default async function AnimePage({
   searchParams,
 }: {
   params: Promise<{ anilistId: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string | string[]; epPage?: string | string[] }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -23,7 +27,7 @@ export default async function AnimePage({
   }
 
   const { anilistId: raw } = await params;
-  const { error } = await searchParams;
+  const { error: errorParam, epPage: epPageParam } = await searchParams;
   const anilistId = Number(raw);
 
   if (!Number.isFinite(anilistId)) {
@@ -53,10 +57,27 @@ export default async function AnimePage({
   }
 
   const entry = await getWatchEntry(session.user.id, anilistId);
+  const error = Array.isArray(errorParam) ? errorParam[0] : errorParam;
   const total = anime.episodeCount ?? null;
   const watches = entry?.episodeWatches ?? [];
   const progress = computeProgress(watches, total);
   const watchedSet = new Set<number>(watches.map((ew) => ew.episode));
+  const epTitle = (ep: number): string => {
+    const t = anime.episodeTitles[ep - 1] ?? null;
+    return t ? `${ep}. ${t}` : `Episódio ${ep}`;
+  };
+  const PER_PAGE = 12;
+  const pageCount = total == null ? 0 : Math.max(1, Math.ceil(total / PER_PAGE));
+  const epPageRaw = Array.isArray(epPageParam) ? epPageParam[0] : (epPageParam ?? null);
+  const epPageParsed = parsePositiveInt(epPageRaw) ?? 1;
+  const epPage = pageCount > 0 ? Math.min(Math.max(epPageParsed, 1), pageCount) : 1;
+  const pageEps =
+    total != null
+      ? Array.from({ length: total }, (_, i) => i + 1).slice(
+          (epPage - 1) * PER_PAGE,
+          epPage * PER_PAGE,
+        )
+      : [];
 
   return (
     <main className="flex-1 bg-background p-8 text-foreground">
@@ -84,18 +105,13 @@ export default async function AnimePage({
             <dl className="mt-4 space-y-1 text-base text-muted">
               <div className="flex gap-2">
                 <dt className="w-32 text-muted">Episódios:</dt>
-                <dd>{anime.episodeCount ?? "?"}</dd>
+                <dd>
+                  {progress.watchedCount}/{total ?? "?"}
+                </dd>
               </div>
             </dl>
-            {entry && (
-              <>
-                <p className="mt-1 text-base text-muted">
-                  {progress.watchedCount} de {total ?? "?"} episódios assistidos
-                </p>
-                <p className="mt-1 text-sm text-muted">
-                  Status: <span className="capitalize text-muted">{entry.status === "watching" ? "assistindo" : "completado"}</span>
-                </p>
-              </>
+            {anime.description && (
+              <p className="mt-4 text-base text-muted">{anime.description}</p>
             )}
 
             {entry && (
@@ -119,47 +135,120 @@ export default async function AnimePage({
             Total de episódios indisponível na AniList para este título.
           </p>
         ) : (
-          <ul className="mt-6 divide-y divide-border rounded-lg border border-border">
-            {Array.from({ length: total }, (_, i) => i + 1).map((ep) => {
-              const watched = watchedSet.has(ep);
-              return (
-                <li key={ep} className="flex items-center justify-between gap-4 p-3">
-                  <div className="text-base">
-                    <span className="font-medium">Episódio {ep}</span>
-                  </div>
-                  {watched ? (
-                    <form action={removeEpisodeAction}>
-                      <input type="hidden" name="anilistId" value={anilistId} />
-                      <input type="hidden" name="season" value={1} />
-                      <input type="hidden" name="episode" value={ep} />
-                      <input type="hidden" name="total" value={total ?? ""} />
-                      <button
-                        type="submit"
-                        aria-label={`remover episódio ${ep}`}
-                        className="cursor-pointer btn-anime rounded-md px-3 py-1.5 text-sm font-medium"
-                      >
-                        ✓ Assistido
-                      </button>
-                    </form>
-                  ) : (
-                    <form action={markEpisodeAction}>
-                      <input type="hidden" name="anilistId" value={anilistId} />
-                      <input type="hidden" name="season" value={1} />
-                      <input type="hidden" name="episode" value={ep} />
-                      <input type="hidden" name="total" value={total ?? ""} />
-                      <button
-                        type="submit"
-                        aria-label={`marcar episódio ${ep}`}
-                        className="cursor-pointer btn-ghost rounded-md px-3 py-1.5 text-sm font-medium"
-                      >
-                        Assistido
-                      </button>
-                    </form>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            {!entry || watchedSet.size < total ? (
+              <form action={markAllAction} className="mt-6">
+                <input type="hidden" name="anilistId" value={anilistId} />
+                <input type="hidden" name="total" value={total} />
+                <input type="hidden" name="epPage" value={epPage} />
+                <button
+                  type="submit"
+                  className="cursor-pointer rounded-md border border-border px-4 py-2 text-base text-foreground hover:bg-muted"
+                >
+                  Marcar todos
+                </button>
+              </form>
+            ) : (
+              <form action={clearAllAction} className="mt-6">
+                <input type="hidden" name="anilistId" value={anilistId} />
+                <input type="hidden" name="epPage" value={epPage} />
+                <button
+                  type="submit"
+                  className="cursor-pointer rounded-md border border-border px-4 py-2 text-base text-foreground hover:bg-muted"
+                >
+                  Desmarcar todos
+                </button>
+              </form>
+            )}
+            <ul className="mt-6 divide-y divide-border rounded-lg border border-border">
+              {pageEps.map((ep) => {
+                const watched = watchedSet.has(ep);
+                return (
+                  <li key={ep} className="flex items-center justify-between gap-4 p-3">
+                    <div className="text-base">
+                      <span className="font-medium">{epTitle(ep)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {watched ? (
+                        <form action={removeEpisodeAction}>
+                          <input type="hidden" name="anilistId" value={anilistId} />
+                          <input type="hidden" name="season" value={1} />
+                          <input type="hidden" name="episode" value={ep} />
+                          <input type="hidden" name="total" value={total ?? ""} />
+                          <input type="hidden" name="epPage" value={epPage} />
+                          <button
+                            type="submit"
+                            aria-label={`remover episódio ${ep}`}
+                            className="cursor-pointer btn-anime rounded-md px-3 py-1.5 text-sm font-medium"
+                          >
+                            ✓ Assistido
+                          </button>
+                        </form>
+                      ) : (
+                        <>
+                          <form action={markUpToAction}>
+                            <input type="hidden" name="anilistId" value={anilistId} />
+                            <input type="hidden" name="season" value={1} />
+                            <input type="hidden" name="episode" value={ep} />
+                            <input type="hidden" name="total" value={total ?? ""} />
+                            <input type="hidden" name="epPage" value={epPage} />
+                            <button
+                              type="submit"
+                              aria-label={`marcar até o episódio ${ep}`}
+                              className="cursor-pointer btn-ghost rounded-md px-3 py-1.5 text-sm font-medium"
+                            >
+                              até aqui
+                            </button>
+                          </form>
+                          <form action={markEpisodeAction}>
+                            <input type="hidden" name="anilistId" value={anilistId} />
+                            <input type="hidden" name="season" value={1} />
+                            <input type="hidden" name="episode" value={ep} />
+                            <input type="hidden" name="total" value={total ?? ""} />
+                            <input type="hidden" name="epPage" value={epPage} />
+                            <button
+                              type="submit"
+                              aria-label={`marcar episódio ${ep}`}
+                              className="cursor-pointer btn-ghost rounded-md px-3 py-1.5 text-sm font-medium"
+                            >
+                              Assistido
+                            </button>
+                          </form>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {pageCount > 1 && (
+              <nav className="mt-4 flex items-center justify-center gap-4 text-base">
+                {epPage > 1 ? (
+                  <a
+                    href={`/anime/${anilistId}?epPage=${epPage - 1}`}
+                    className="cursor-pointer text-accent"
+                  >
+                    ← Anterior
+                  </a>
+                ) : (
+                  <span className="text-muted">← Anterior</span>
+                )}
+                <span className="text-muted">
+                  Página {epPage} de {pageCount}
+                </span>
+                {epPage < pageCount ? (
+                  <a
+                    href={`/anime/${anilistId}?epPage=${epPage + 1}`}
+                    className="cursor-pointer text-accent"
+                  >
+                    Próxima →
+                  </a>
+                ) : (
+                  <span className="text-muted">Próxima →</span>
+                )}
+              </nav>
+            )}
+          </>
         )}
 
         <a
