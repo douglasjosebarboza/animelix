@@ -121,43 +121,6 @@ export async function markEpisodeWatched(
   });
 }
 
-export async function setWatchStatus(
-  userId: string,
-  anilistId: number,
-  to: WatchStatus,
-): Promise<void> {
-  const entry = await prisma.watchEntry.findUnique({
-    where: { userId_anilistId: { userId, anilistId } },
-    include: { episodeWatches: true },
-  });
-  if (!entry) {
-    throw new WatchlistError("Anime não está na sua watchlist");
-  }
-  const transition = computeNextStatus(entry.status as WatchStatus, {
-    type: "setStatus",
-    to,
-  });
-  if (transition) {
-    await prisma.watchEntry.update({
-      where: { id: entry.id },
-      data: { status: transition.to },
-    });
-  }
-}
-
-// Deprecated: auto-pause removed with paused status — kept as no-op for compatibility.
-export async function setAutoPause(
-  _userId: string,
-  _anilistId: number,
-  _enabled: boolean,
-): Promise<void> {
-  return;
-}
-
-export async function runAutoPauseJob(_now: Date = new Date()): Promise<number> {
-  return 0;
-}
-
 export async function removeEpisodeWatch(
   userId: string,
   anilistId: number,

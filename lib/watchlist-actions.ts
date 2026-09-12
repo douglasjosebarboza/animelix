@@ -10,11 +10,8 @@ import {
   removeFromWatchlist,
   markEpisodeWatched,
   removeEpisodeWatch,
-  setWatchStatus,
-  setAutoPause,
   WatchlistError,
 } from "@/lib/watchlist";
-import type { WatchStatus } from "@/lib/watchstatus";
 import { parsePositiveInt, parseTotal } from "@/lib/parse";
 
 async function requireUserId(): Promise<string> {
@@ -81,29 +78,6 @@ export async function removeEpisodeAction(formData: FormData): Promise<void> {
   // Removing the last watched episode deletes the entry; sending the user back
   // to the watchlist keeps them on a page that still makes sense without it.
   if (entryRemoved) redirect("/watchlist");
-  revalidatePath(`/anime/${anilistId}`);
-}
-
-const STATUSES: WatchStatus[] = ["watching", "completed"];
-
-export async function setWatchStatusAction(formData: FormData): Promise<void> {
-  const userId = await requireUserId();
-  const anilistId = parsePositiveInt(formData.get("anilistId"));
-  if (anilistId == null) redirect("/watchlist");
-  const status = String(formData.get("status") ?? "") as WatchStatus;
-  if (!STATUSES.includes(status)) {
-    throw new Error(`status inválido: ${status}`);
-  }
-  await setWatchStatus(userId, anilistId, status);
-  revalidatePath(`/anime/${anilistId}`);
-}
-
-export async function setAutoPauseAction(formData: FormData): Promise<void> {
-  const userId = await requireUserId();
-  const anilistId = parsePositiveInt(formData.get("anilistId"));
-  if (anilistId == null) redirect("/watchlist");
-  const enabled = formData.get("enabled") === "on";
-  await setAutoPause(userId, anilistId, enabled);
   revalidatePath(`/anime/${anilistId}`);
 }
 
