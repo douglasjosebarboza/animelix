@@ -63,7 +63,9 @@ export default async function AnimePage({
   const progress = computeProgress(watches, total);
   const watchedSet = new Set<number>(watches.map((ew) => ew.episode));
   const epTitle = (ep: number): string => {
-    const t = anime.episodeTitles[ep - 1] ?? null;
+    // episodeTitles pode vir ausente de cache antigo (formato pré-Task 1);
+    // nesse caso degrada para "Episódio N" até o cache renovar.
+    const t = (anime.episodeTitles ?? [])[ep - 1] ?? null;
     return t ? `${ep}. ${t}` : `Episódio ${ep}`;
   };
   const PER_PAGE = 12;
