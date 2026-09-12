@@ -106,7 +106,7 @@ test("bulk e paginação", async ({ page }) => {
   await page.goto("/anime/1?epPage=2");
   await expect(page.getByRole("heading", { name: /Cowboy Bebop/i })).toBeVisible();
   await expect(page.getByText("Página 2 de 3")).toBeVisible();
-  await expect(page.locator("ul li").first()).toContainText("13.");
+  await expect(page.locator("ul li").first()).toContainText(/Episódio 13|13\./);
   await expect(page.getByText("Episódio 12", { exact: true })).toHaveCount(0);
 
   // "até aqui" no ep 3 -> 3 assistidos

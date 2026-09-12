@@ -118,6 +118,11 @@ describe("watchlist pura (sem Anime)", () => {
     expect(prisma.episodeWatch.createMany).not.toHaveBeenCalled();
   });
 
+  it("markEpisodesUpTo rejeita episode além do total sem escrever", async () => {
+    await expect(markEpisodesUpTo("user-1", 123, 99, 12)).rejects.toThrow(WatchlistError);
+    expect(prisma.episodeWatch.createMany).not.toHaveBeenCalled();
+  });
+
   it("clearAllWatched apaga watches e entry; sem entry é no-op", async () => {
     vi.mocked(prisma.watchEntry.findUnique).mockResolvedValueOnce({ id: "e1", status: "watching" } as never);
     await clearAllWatched("user-1", 123);

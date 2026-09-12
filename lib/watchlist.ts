@@ -127,6 +127,9 @@ export async function markEpisodesUpTo(
   episode: number,
   total?: number | null,
 ): Promise<void> {
+  if (total != null && episode > total) {
+    throw new WatchlistError("Episódio inválido para este título");
+  }
   return prisma.$transaction(async (tx) => {
     const found = await tx.watchEntry.findUnique({
       where: { userId_anilistId: { userId, anilistId } },
