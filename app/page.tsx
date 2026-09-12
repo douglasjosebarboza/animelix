@@ -36,18 +36,10 @@ export default async function HomePage({
           </p>
         )}
 
-        {!error && (
-          <p className="mt-4 text-base text-muted">
-            {query
-              ? `${results.length} resultado(s)`
-              : `${results.length} anime(s) nesta temporada`}
-          </p>
-        )}
-
         <ul className="mt-4 grid min-h-4 grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {results.map((anime) => (
+          {results.map((anime, idx) => (
             <li
-              key={anime.anilistId}
+              key={anime.anilistId ?? idx}
               className="group overflow-hidden rounded-2xl border border-border bg-surface transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/20"
             >
               {anime.coverImageUrl && (
@@ -68,10 +60,10 @@ export default async function HomePage({
                 <p className="mt-1 text-sm text-accent">
                   {`${anime.episodeCount ?? "?"} eps`}
                 </p>
-                <a
-                  href={`/anime/${anime.anilistId}`}
-                  className="btn-anime mt-3 block w-full cursor-pointer rounded-md px-2 py-1.5 text-center text-sm font-medium"
-                >
+                 <a
+                   href={`/anime/${anime.anilistId}`}
+                   className="btn-anime mt-3 block w-full cursor-pointer rounded-md px-2 py-1.5 text-center text-sm font-medium"
+                 >
                   Ver detalhes
                 </a>
               </div>

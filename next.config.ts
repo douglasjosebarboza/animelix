@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "cdn.anilist.co" },
       { protocol: "https", hostname: "*.anilist.co" },
       { protocol: "https", hostname: "cdn.myanimelist.net" },
+      { protocol: "https", hostname: "media.kitsu.app" },
     ],
   },
   compress: true,

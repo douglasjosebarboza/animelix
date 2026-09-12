@@ -72,11 +72,11 @@ export default function SiteNav({ loggedIn }: { loggedIn: boolean }) {
     }
   }
 
-  function selectResult(anilistId: number) {
+  function selectResult(anime: SearchResult) {
     setQuery("");
     setResults([]);
     setOpen(false);
-    router.push(`/anime/${anilistId}`);
+    router.push(`/anime/${anime.anilistId}`);
   }
 
   return (
@@ -107,11 +107,11 @@ export default function SiteNav({ loggedIn }: { loggedIn: boolean }) {
           </form>
           {open && results.length > 0 && (
             <ul className="absolute left-0 top-full z-50 mt-1 max-h-80 w-full overflow-auto rounded-md border border-border bg-surface shadow-lg">
-              {results.map((anime) => (
-                <li key={anime.anilistId}>
+               {results.map((anime, idx) => (
+                 <li key={anime.anilistId ?? idx}>
                   <button
                     type="button"
-                    onClick={() => selectResult(anime.anilistId)}
+                    onClick={() => selectResult(anime)}
                     className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left text-base hover:bg-surface-2 transition-colors"
                   >
                     {anime.coverImageUrl && (
