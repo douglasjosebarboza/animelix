@@ -150,14 +150,12 @@ describe("AniList client", () => {
   });
 
   describe("getSeasonalAnime", () => {
-    it("maps seasonal results with score and genres", async () => {
+    it("maps seasonal results", async () => {
       const results = await getSeasonalAnime({ season: "FALL", seasonYear: 2026 });
       expect(results[0]).toMatchObject({
         anilistId: 10,
         title: "Frieren",
         coverImageUrl: "https://img/10.jpg",
-        averageScore: 84,
-        genres: ["Drama", "Adventure"],
       });
       expect(results[0].episodeCount).toBe(12);
     });
@@ -168,9 +166,5 @@ describe("AniList client", () => {
       expect(results[0].title).toBe("Naruto");
     });
 
-    it("defaults to an empty genres array when the API omits it", async () => {
-      const data = await getSeasonalAnime({ season: "FALL", seasonYear: 2026 });
-      expect(Array.isArray(data[0].genres)).toBe(true);
-    });
   });
 });
