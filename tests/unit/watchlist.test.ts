@@ -1,20 +1,26 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { addToWatchlist, markEpisodeWatched, WatchlistError } from "@/lib/watchlist";
+import { addToWatchlist, markEpisodeWatched, markEpisodesUpTo, markAllWatched, clearAllWatched, WatchlistError } from "@/lib/watchlist";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     anime: undefined,
-    watchEntry: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
-    episodeWatch: { create: vi.fn() },
+    watchEntry: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    episodeWatch: { create: vi.fn(), createMany: vi.fn(), deleteMany: vi.fn(), delete: vi.fn() },
     $transaction: vi.fn((fn: (tx: unknown) => unknown) =>
       fn({
         watchEntry: {
           findUnique: vi.mocked(prisma.watchEntry.findUnique),
           create: vi.mocked(prisma.watchEntry.create),
           update: vi.mocked(prisma.watchEntry.update),
+          delete: vi.mocked(prisma.watchEntry.delete),
         },
-        episodeWatch: { create: vi.mocked(prisma.episodeWatch.create) },
+        episodeWatch: {
+          create: vi.mocked(prisma.episodeWatch.create),
+          createMany: vi.mocked(prisma.episodeWatch.createMany),
+          deleteMany: vi.mocked(prisma.episodeWatch.deleteMany),
+          delete: vi.mocked(prisma.episodeWatch.delete),
+        },
       }),
     ),
   },
@@ -75,5 +81,51 @@ describe("watchlist pura (sem Anime)", () => {
     expect(prisma.watchEntry.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: { userId: "user-1", anilistId: 123, status: "watching" } }),
     );
+  });
+
+  it("markEpisodesUpTo marca 1..N pulando existentes", async () => {
+    const before = { id: "e1", status: "watching", episodeWatches: [{ id: "w2", episode: 2 }] };
+    const after = {
+      id: "e1", status: "watching",
+      episodeWatches: [{ id: "w1", episode: 1 }, { id: "w2", episode: 2 }, { id: "w3", episode: 3 }],
+    };
+    vi.mocked(prisma.watchEntry.findUnique)
+      .mockResolvedValueOnce(before as never)
+      .mockResolvedValueOnce(after as never);
+    await markEpisodesUpTo("user-1", 123, 3, 12);
+    expect(prisma.episodeWatch.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: [
+        { watchEntryId: "e1", episode: 1 },
+        { watchEntryId: "e1", episode: 3 },
+      ] }),
+    );
+  });
+
+  it("markEpisodesUpTo auto-adiciona sem entry", async () => {
+    const after = { id: "e9", status: "watching", episodeWatches: [{ id: "w1", episode: 1 }] };
+    vi.mocked(prisma.watchEntry.findUnique)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(after as never);
+    vi.mocked(prisma.watchEntry.create).mockResolvedValue({ id: "e9", status: "watching" } as never);
+    await markEpisodesUpTo("user-1", 123, 1, 12);
+    expect(prisma.watchEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { userId: "user-1", anilistId: 123, status: "watching" } }),
+    );
+  });
+
+  it("markAllWatched com total null falha sem escrever", async () => {
+    await expect(markAllWatched("user-1", 123, null)).rejects.toThrow(WatchlistError);
+    expect(prisma.episodeWatch.createMany).not.toHaveBeenCalled();
+  });
+
+  it("clearAllWatched apaga watches e entry; sem entry é no-op", async () => {
+    vi.mocked(prisma.watchEntry.findUnique).mockResolvedValueOnce({ id: "e1", status: "watching" } as never);
+    await clearAllWatched("user-1", 123);
+    expect(prisma.episodeWatch.deleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { watchEntryId: "e1" } }),
+    );
+    vi.clearAllMocks();
+    vi.mocked(prisma.watchEntry.findUnique).mockResolvedValueOnce(null);
+    await expect(clearAllWatched("user-1", 123)).resolves.toBeUndefined();
   });
 });

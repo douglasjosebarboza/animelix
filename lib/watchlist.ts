@@ -121,6 +121,89 @@ export async function markEpisodeWatched(
   });
 }
 
+export async function markEpisodesUpTo(
+  userId: string,
+  anilistId: number,
+  episode: number,
+  total?: number | null,
+): Promise<void> {
+  return prisma.$transaction(async (tx) => {
+    const found = await tx.watchEntry.findUnique({
+      where: { userId_anilistId: { userId, anilistId } },
+      include: { episodeWatches: true },
+    });
+    let before = found;
+    if (!before) {
+      try {
+        const created = await tx.watchEntry.create({
+          data: { userId, anilistId, status: "watching" },
+        });
+        before = { ...created, episodeWatches: [] };
+      } catch (err) {
+        if ((err as { code?: string }).code !== "P2002") throw err;
+        const retry = await tx.watchEntry.findUnique({
+          where: { userId_anilistId: { userId, anilistId } },
+          include: { episodeWatches: true },
+        });
+        if (!retry) throw new WatchlistError("Anime não está na sua watchlist");
+        before = retry;
+      }
+    }
+
+    const seen = new Set(before.episodeWatches.map((e) => e.episode));
+    const missing = Array.from({ length: episode }, (_, i) => i + 1).filter((ep) => !seen.has(ep));
+    if (missing.length > 0) {
+      await tx.episodeWatch.createMany({
+        data: missing.map((ep) => ({ watchEntryId: before.id, episode: ep })),
+        skipDuplicates: true,
+      });
+    }
+
+    const after = await tx.watchEntry.findUnique({
+      where: { userId_anilistId: { userId, anilistId } },
+      include: { episodeWatches: true },
+    });
+    if (!after) return;
+
+    const transition = computeNextStatus(before.status as WatchStatus, {
+      type: "markEpisode",
+      distinctWatched: distinctCount(after),
+      total: total ?? null,
+    });
+    if (transition) {
+      await tx.watchEntry.update({
+        where: { id: after.id },
+        data: { status: transition.to },
+      });
+    }
+  });
+}
+
+export async function markAllWatched(
+  userId: string,
+  anilistId: number,
+  total?: number | null,
+): Promise<void> {
+  if (total == null || !Number.isInteger(total) || total <= 0) {
+    throw new WatchlistError("Total de episódios indisponível para este título");
+  }
+  return markEpisodesUpTo(userId, anilistId, total, total);
+}
+
+export async function clearAllWatched(
+  userId: string,
+  anilistId: number,
+): Promise<void> {
+  return prisma.$transaction(async (tx) => {
+    const entry = await tx.watchEntry.findUnique({
+      where: { userId_anilistId: { userId, anilistId } },
+    });
+    if (!entry) return;
+    await tx.episodeWatch.deleteMany({ where: { watchEntryId: entry.id } });
+    await tx.watchEntry.delete({ where: { id: entry.id } });
+  });
+}
+
 export async function removeEpisodeWatch(
   userId: string,
   anilistId: number,
