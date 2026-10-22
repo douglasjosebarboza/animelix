@@ -1,10 +1,13 @@
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getCachedAnimeById } from "@/lib/anime-cache";
 import { getWatchEntry } from "@/lib/watchlist";
 import { computeProgress } from "@/lib/progress";
 import { parsePositiveInt } from "@/lib/parse";
+import { formatTimeUntilAiring } from "@/lib/anilist";
+import { logEvent } from "@/lib/logger";
 import {
   markEpisodeAction,
   removeEpisodeAction,
@@ -37,19 +40,25 @@ export default async function AnimePage({
   try {
     anime = await getCachedAnimeById(anilistId);
   } catch (err) {
+    // Detalhe do erro só no log — a tela mostra uma mensagem genérica.
+    logEvent("catalog_error", {
+      scope: "anime",
+      anilistId,
+      message: (err as Error).message,
+    });
     return (
       <main className="flex-1 bg-background p-8 text-foreground">
         <div className="mx-auto max-w-3xl">
           <p className="rounded-md border border-amber-700 bg-amber-950 p-3 text-base text-amber-300">
-            Não foi possível carregar este anime da AniList:{" "}
-            {(err as Error).message}
+            Não foi possível carregar este anime da AniList agora. Tente novamente
+            em instantes.
           </p>
-          <a
+          <Link
             href="/"
             className="cursor-pointer mt-4 inline-block text-base text-accent"
           >
             ← Voltar
-          </a>
+          </Link>
         </div>
       </main>
     );
@@ -78,6 +87,19 @@ export default async function AnimePage({
     const t = (anime.episodeTitles ?? [])[ep - 1] ?? null;
     return t ? `${ep}. ${t}` : `Episódio ${ep}`;
   };
+  // Próximo ep ainda não lançado (só 1 por vez, limite da AniList).
+  // Cache antigo pode não ter o campo — degrada para null.
+  const nextAiring = anime.nextAiringEpisode ?? null;
+  const nextAiringLabel = nextAiring ? formatTimeUntilAiring(nextAiring.airingAt) : null;
+  const nextAiringDate =
+    nextAiring != null
+      ? new Date(nextAiring.airingAt * 1000).toLocaleString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : null;
   const PER_PAGE = 12;
   const pageCount = total == null ? 0 : Math.max(1, Math.ceil(total / PER_PAGE));
   const epPageRaw = Array.isArray(epPageParam) ? epPageParam[0] : (epPageParam ?? null);
@@ -135,30 +157,39 @@ export default async function AnimePage({
           </p>
         ) : (
           <>
-            {!entry || watchedSet.size < total ? (
-              <form action={markAllAction} className="mt-6">
-                <input type="hidden" name="anilistId" value={anilistId} />
-                <input type="hidden" name="total" value={total} />
-                <input type="hidden" name="epPage" value={epPage} />
-                <button
-                  type="submit"
-                  className="cursor-pointer rounded-md border border-border px-4 py-2 text-base text-foreground hover:bg-muted"
+            <div className="mt-6 flex items-center justify-between gap-4">
+              {!entry || watchedSet.size < total ? (
+                <form action={markAllAction}>
+                  <input type="hidden" name="anilistId" value={anilistId} />
+                  <input type="hidden" name="epPage" value={epPage} />
+                  <button
+                    type="submit"
+                    className="cursor-pointer rounded-md border border-border px-4 py-2 text-base text-foreground hover:bg-muted"
+                  >
+                    Marcar todos
+                  </button>
+                </form>
+              ) : (
+                <form action={clearAllAction}>
+                  <input type="hidden" name="anilistId" value={anilistId} />
+                  <input type="hidden" name="epPage" value={epPage} />
+                  <button
+                    type="submit"
+                    className="cursor-pointer rounded-md border border-border px-4 py-2 text-base text-foreground hover:bg-muted"
+                  >
+                    Desmarcar todos
+                  </button>
+                </form>
+              )}
+              {nextAiring != null && nextAiringLabel != null && (
+                <p
+                  title={`Estreia em ${nextAiringDate}`}
+                  className="text-right text-base text-muted"
                 >
-                  Marcar todos
-                </button>
-              </form>
-            ) : (
-              <form action={clearAllAction} className="mt-6">
-                <input type="hidden" name="anilistId" value={anilistId} />
-                <input type="hidden" name="epPage" value={epPage} />
-                <button
-                  type="submit"
-                  className="cursor-pointer rounded-md border border-border px-4 py-2 text-base text-foreground hover:bg-muted"
-                >
-                  Desmarcar todos
-                </button>
-              </form>
-            )}
+                  EP {nextAiring.episode} em {nextAiringLabel}
+                </p>
+              )}
+            </div>
             <ul className="mt-6 divide-y divide-border rounded-lg border border-border">
               {pageEps.map((ep) => {
                 const watched = watchedSet.has(ep);
@@ -171,9 +202,7 @@ export default async function AnimePage({
                       {watched ? (
                         <form action={removeEpisodeAction}>
                           <input type="hidden" name="anilistId" value={anilistId} />
-                          <input type="hidden" name="season" value={1} />
                           <input type="hidden" name="episode" value={ep} />
-                          <input type="hidden" name="total" value={total ?? ""} />
                           <input type="hidden" name="epPage" value={epPage} />
                           <button
                             type="submit"
@@ -188,9 +217,7 @@ export default async function AnimePage({
                           {ep > firstUnwatched && (
                             <form action={markUpToAction}>
                             <input type="hidden" name="anilistId" value={anilistId} />
-                            <input type="hidden" name="season" value={1} />
                             <input type="hidden" name="episode" value={ep} />
-                            <input type="hidden" name="total" value={total ?? ""} />
                             <input type="hidden" name="epPage" value={epPage} />
                             <button
                               type="submit"
@@ -203,9 +230,7 @@ export default async function AnimePage({
                           )}
                           <form action={markEpisodeAction}>
                             <input type="hidden" name="anilistId" value={anilistId} />
-                            <input type="hidden" name="season" value={1} />
                             <input type="hidden" name="episode" value={ep} />
-                            <input type="hidden" name="total" value={total ?? ""} />
                             <input type="hidden" name="epPage" value={epPage} />
                             <button
                               type="submit"
@@ -252,12 +277,12 @@ export default async function AnimePage({
           </>
         )}
 
-        <a
+        <Link
           href="/"
           className="cursor-pointer mt-4 inline-block text-base text-accent"
         >
           ← Voltar
-        </a>
+        </Link>
       </div>
     </main>
   );

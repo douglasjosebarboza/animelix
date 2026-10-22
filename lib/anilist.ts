@@ -1,8 +1,16 @@
 import { logEvent } from "@/lib/logger";
+import { hitRateLimit } from "@/lib/rateLimit";
+import { getLimits } from "@/lib/limits";
 
 function anilistEndpoint(): string {
   return process.env.ANILIST_GRAPHQL_URL ?? "https://graphql.anilist.co";
 }
+
+export type NextAiringEpisode = {
+  episode: number;
+  airingAt: number;
+  timeUntilAiring: number;
+};
 
 export type AnimeSeed = {
   anilistId: number;
@@ -12,12 +20,15 @@ export type AnimeSeed = {
   seasonCount: number | null;
   description: string | null;
   episodeTitles: (string | null)[];
+  nextAiringEpisode: NextAiringEpisode | null;
 };
 
 export class AnilistError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    /** true quando o erro foi a cota global da AniList, não a API em si. */
+    readonly isBudgetExceeded = false,
   ) {
     super(message);
     this.name = "AnilistError";
@@ -33,6 +44,11 @@ type RawMedia = {
   genres?: string[] | null;
   description?: string | null;
   streamingEpisodes?: { title?: string | null }[] | null;
+  nextAiringEpisode?: {
+    episode?: number | null;
+    airingAt?: number | null;
+    timeUntilAiring?: number | null;
+  } | null;
 };
 
 function pickTitle(title: RawMedia["title"]): string {
@@ -58,6 +74,16 @@ export function mapEpisodeTitles(
   });
 }
 
+function mapNextAiringEpisode(
+  raw: RawMedia["nextAiringEpisode"],
+): NextAiringEpisode | null {
+  const episode = raw?.episode;
+  const airingAt = raw?.airingAt;
+  if (episode == null || airingAt == null) return null;
+  const timeUntilAiring = raw?.timeUntilAiring ?? Math.max(0, airingAt * 1000 - Date.now()) / 1000;
+  return { episode, airingAt, timeUntilAiring: Math.max(0, Math.floor(timeUntilAiring)) };
+}
+
 function mapMedia(m: RawMedia): AnimeSeed {
   // AniList does not expose a season count on Media (only `season`/`seasonYear`),
   // so seasonCount is left null for now.
@@ -69,7 +95,20 @@ function mapMedia(m: RawMedia): AnimeSeed {
     seasonCount: null,
     description: sanitizeDescription(m.description),
     episodeTitles: mapEpisodeTitles(m.streamingEpisodes),
+    nextAiringEpisode: mapNextAiringEpisode(m.nextAiringEpisode),
   };
+}
+
+export function formatTimeUntilAiring(airingAtSeconds: number, nowMs: number = Date.now()): string | null {
+  const diffSeconds = Math.floor(airingAtSeconds - nowMs / 1000);
+  if (diffSeconds <= 0) return null;
+  const days = Math.floor(diffSeconds / 86400);
+  const hours = Math.floor((diffSeconds % 86400) / 3600);
+  const minutes = Math.floor((diffSeconds % 3600) / 60);
+  if (days > 0) return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+  if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}min` : `${hours}h`;
+  if (minutes > 0) return `${minutes}min`;
+  return "breve";
 }
 
 type GraphQLResponse<T> = {
@@ -82,12 +121,68 @@ type GraphQLResponse<T> = {
 // keeping us well under the limit for repeated reads of the same Anime.
 const inflight = new Map<string, Promise<unknown>>();
 
-async function request<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+/**
+ * Teto GLOBAL de chamadas de saída à AniList.
+ *
+ * O cache (`unstable_cache`) protege contra consultas repetidas, mas cada
+ * consulta nova ainda consome cota. O rate limit por IP não basta: vários IPs
+ * somados estouram os 90 req/min da AniList e o IP do app é banido — o site
+ * inteiro cai. Este teto é distribuído (Redis), então vale para todas as
+ * instâncias de lambda somadas.
+ */
+const ANILIST_WINDOW_MS = 60_000;
+
+/**
+ * Baldes da cota global.
+ *
+ * "search" e "detail" são independentes de propósito: uma enxurrada de
+ * buscas com termos inéditos (cada uma é um cache-miss) consome o balde
+ * único e derruba também as páginas de anime que ainda não estão em cache.
+ * Separando, o ataque de cache-miss só consegue esgotar o balde de busca.
+ *
+ * A soma dos dois (25 + 40 = 65/min) fica abaixo dos 90 req/min que a
+ * AniList permite — estourar isso faz a Vercel banir o IP do app e derruba
+ * o site inteiro.
+ */
+type AnilistBucket = "search" | "detail";
+
+function budgetKey(bucket: AnilistBucket): string {
+  return `anilist:global:${bucket}`;
+}
+
+function budgetLimit(bucket: AnilistBucket): number {
+  const limits = getLimits();
+  return bucket === "search"
+    ? limits.anilistSearchCallsPerMinute
+    : limits.anilistDetailCallsPerMinute;
+}
+
+async function request<T>(
+  query: string,
+  variables: Record<string, unknown>,
+  bucket: AnilistBucket = "detail",
+): Promise<T> {
   const key = JSON.stringify({ query, variables });
   const cached = inflight.get(key) as Promise<T> | undefined;
   if (cached) return cached;
 
   const promise = (async () => {
+    // Falha fechada: melhor recusar a consulta do que queimar a cota global
+    // e ser banido da AniList.
+    const budget = await hitRateLimit(
+      budgetKey(bucket),
+      budgetLimit(bucket),
+      ANILIST_WINDOW_MS,
+    );
+    if (!budget.ok) {
+      logEvent("anilist_budget_exhausted", { bucket });
+      throw new AnilistError(
+        "Limite de requisições à AniList atingido. Tente novamente em instantes.",
+        undefined,
+        true,
+      );
+    }
+
     let res: Response;
     try {
       res = await fetch(anilistEndpoint(), {
@@ -150,12 +245,17 @@ const BY_ID_QUERY = `
       episodes
       description(asHtml: false)
       streamingEpisodes { title }
+      nextAiringEpisode { episode airingAt timeUntilAiring }
     }
   }
 `;
 
 export async function searchAnime(query: string): Promise<AnimeSeed[]> {
-  const data = await request<{ Page: { media: RawMedia[] } }>(SEARCH_QUERY, { q: query });
+  const data = await request<{ Page: { media: RawMedia[] } }>(
+    SEARCH_QUERY,
+    { q: query },
+    "search",
+  );
   return (data.Page?.media ?? []).map(mapMedia);
 }
 

@@ -6,7 +6,3 @@ export function parsePositiveInt(value: FormDataEntryValue | null): number | nul
   const n = Number(value);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
-
-export function parseTotal(value: FormDataEntryValue | null): number | null {
-  return parsePositiveInt(value);
-}

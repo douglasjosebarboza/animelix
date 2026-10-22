@@ -1,6 +1,10 @@
 import Image from "next/image";
-import { catalog } from "@/lib/catalog";
+import { searchCachedAnime, getCachedSeasonalAnime } from "@/lib/anime-cache";
 import { currentSeason } from "@/lib/anilist";
+import { logEvent } from "@/lib/logger";
+
+/** Tamanho máximo da query — evita payloads absurdos enviados à AniList. */
+const MAX_QUERY_LENGTH = 100;
 
 export default async function HomePage({
   searchParams,
@@ -9,22 +13,33 @@ export default async function HomePage({
 }) {
   const { q } = await searchParams;
 
-  const query = q?.trim();
+  const rawQuery = (q ?? "").trim();
+  const queryTooLong = rawQuery.length > MAX_QUERY_LENGTH;
+  const query = queryTooLong ? "" : rawQuery;
 
-  let results: Awaited<ReturnType<typeof catalog.search>> = [];
+  let results: Awaited<ReturnType<typeof searchCachedAnime>> = [];
   let error: string | null = null;
 
   try {
-    if (query) {
-      results = await catalog.search(query);
+    if (queryTooLong) {
+      error = `Busca muito longa (máximo de ${MAX_QUERY_LENGTH} caracteres).`;
+    } else if (query) {
+      results = await searchCachedAnime(query);
     } else {
       const { season, year } = currentSeason();
-      results = await catalog.getSeasonal(season, year);
+      results = await getCachedSeasonalAnime(season, year);
     }
   } catch (err) {
+    // A mensagem do erro vai para o log, não para a tela: ela carrega
+    // detalhes da AniList e da infraestrutura (ex.: "Falha de rede ao chamar
+    // AniList: fetch failed") que não devem ser expostos.
+    logEvent("catalog_error", {
+      scope: query ? "search" : "seasonal",
+      message: (err as Error).message,
+    });
     error = query
-      ? `Não foi possível buscar na AniList: ${(err as Error).message}`
-      : `Não foi possível carregar a temporada da AniList: ${(err as Error).message}`;
+      ? "Não foi possível buscar agora. Tente novamente em instantes."
+      : "Não foi possível carregar a temporada agora. Tente novamente em instantes.";
   }
 
   return (

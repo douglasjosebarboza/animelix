@@ -73,13 +73,13 @@ test("watchlist groups entries by status", async ({ page }) => {
   await page.getByRole("button", { name: "marcar episódio 1", exact: true }).click();
   await expect(page).toHaveURL(/\/anime\/\d+/);
 
-  // New entry exists (entry controls visible, counter shows progress)
-  await expect(page.getByRole("button", { name: "Remover", exact: true })).toBeVisible();
+  // New entry exists (episode control shows the watched state, counter shows progress)
+  await expect(page.getByRole("button", { name: "remover episódio 1", exact: true })).toBeVisible();
   await expect(page.locator("dl")).toContainText("/");
 
   // Mark another episode; entry still there
   await page.getByRole("button", { name: "marcar episódio 2", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Remover", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "remover episódio 2", exact: true })).toBeVisible();
 
   // On the watchlist it is grouped under Assistindo or Completo
   await page.goto("/watchlist");

@@ -2,10 +2,8 @@ import Image from "next/image";
 import { requireUser } from "@/auth";
 import { listWatchEntries } from "@/lib/watchlist";
 import { getCachedAnimeById } from "@/lib/anime-cache";
-import {
-  removeFromWatchlistAction,
-  deleteAccountAction,
-} from "@/lib/watchlist-actions";
+import { removeFromWatchlistAction } from "@/lib/watchlist-actions";
+import { DeleteAccountForm } from "@/components/DeleteAccountForm";
 
 const STATUS_ORDER: string[] = ["watching", "completed"];
 
@@ -42,14 +40,7 @@ export default async function WatchlistPage({
       <div className="mx-auto max-w-3xl">
         <div className="flex items-center justify-between">
           <h1 className="text-4xl font-bold text-gradient">Minha Watchlist</h1>
-          <form action={deleteAccountAction}>
-            <button
-              type="submit"
-              className="cursor-pointer rounded-md border border-red-800 px-3 py-2 text-base text-red-300 hover:bg-red-950"
-            >
-              Excluir Conta
-            </button>
-          </form>
+          <DeleteAccountForm />
         </div>
 
         {entries.length === 0 ? (

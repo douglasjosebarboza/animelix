@@ -1,8 +1,22 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import {
+  RateLimitError,
+  verifyCredentials,
+} from "@/lib/verify-credentials";
+
+/**
+ * Erro de cota esgotada.
+ *
+ * `CredentialsSignin` com `code` próprio: o Auth.js redireciona para
+ * `/login?error=CredentialsSignin&code=rate_limited`, e a action distingue
+ * "senha errada" de "cota esgotada" sem revelar se o e-mail existe.
+ */
+export class RateLimitedSignin extends CredentialsSignin {
+  code = "rate_limited";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -23,18 +37,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      authorize: async (raw) => {
-        const email = typeof raw?.email === "string" ? raw.email : "";
-        const password = typeof raw?.password === "string" ? raw.password : "";
-        if (!email || !password) return null;
-
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return null;
-
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
-
-        return { id: user.id, email: user.email };
+      /**
+       * ÚNICO ponto onde a senha é comparada — e, portanto, o único ponto
+       * onde o rate limit precisa estar.
+       *
+       * O rate limit NÃO pode viver na server action: o `authorize` também é
+       * chamado direto pelo handler HTTP do Auth.js, via
+       * `POST /api/auth/callback/credentials`. Um atacante que pegue o
+       * `csrfToken` em `GET /api/auth/csrf` e poste direto nesse endpoint
+       * contornaria qualquer verificação feita na action — e ficaria com
+       * brute force ilimitado.
+       */
+      authorize: async (raw, request) => {
+        try {
+          return await verifyCredentials(raw, request);
+        } catch (err) {
+          if (err instanceof RateLimitError) {
+            throw new RateLimitedSignin();
+          }
+          throw err;
+        }
       },
     }),
   ],

@@ -18,7 +18,7 @@ test("nav is visible on login and register pages", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Animelix" })).toBeVisible();
 });
 
-test("logged-in users see Perfil and Sair, and Sair logs them out", async ({ page }) => {
+test("logged-in users see Watchlist and Sair, and Sair logs them out", async ({ page }) => {
   const email = `e2e+${Date.now()}@animelix.test`;
   const password = "supersecret123";
 
@@ -34,11 +34,11 @@ test("logged-in users see Perfil and Sair, and Sair logs them out", async ({ pag
   await expect(page).toHaveURL(/\/watchlist/);
 
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Perfil" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Watchlist" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sair" })).toBeVisible();
 
   await page.getByRole("button", { name: "Sair" }).click();
   await expect(page).toHaveURL(/\/$|\/\?/);
   await expect(page.getByRole("link", { name: "Entrar" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Perfil" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Watchlist" })).toHaveCount(0);
 });

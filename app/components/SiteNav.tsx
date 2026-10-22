@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { signOutAction } from "@/lib/auth-actions";
@@ -82,12 +83,12 @@ export default function SiteNav({ loggedIn }: { loggedIn: boolean }) {
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/70 px-6 py-3 text-base backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex max-w-7xl items-center">
-        <a
+        <Link
           href="/"
           className="cursor-pointer text-3xl font-extrabold tracking-tight text-gradient"
         >
           Animelix
-        </a>
+        </Link>
         <div ref={wrapperRef} className="relative mx-auto">
           <form onSubmit={handleSubmit} className="flex">
             <input

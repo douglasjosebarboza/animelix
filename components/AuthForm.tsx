@@ -7,9 +7,11 @@ import type { AuthResult } from "@/lib/credentials";
 type Props = {
   mode: "login" | "register";
   action: (prev: AuthResult, formData: FormData) => Promise<AuthResult>;
+  /** Aviso neutro exibido acima do formulário (ex.: registro concluído). */
+  notice?: string;
 };
 
-export function AuthForm({ mode, action }: Props) {
+export function AuthForm({ mode, action, notice }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const isLogin = mode === "login";
 
@@ -22,6 +24,12 @@ export function AuthForm({ mode, action }: Props) {
         <h1 className="text-2xl font-semibold">
           {isLogin ? "Entrar no Animelix" : "Criar conta no Animelix"}
         </h1>
+
+        {notice ? (
+          <p className="rounded-md bg-surface-2 px-3 py-2 text-base text-muted">
+            {notice}
+          </p>
+        ) : null}
 
         <label className="cursor-pointer block space-y-1">
           <span className="text-base text-muted">Email</span>

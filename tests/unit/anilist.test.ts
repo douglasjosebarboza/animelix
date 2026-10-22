@@ -8,6 +8,7 @@ import {
   AnilistError,
   sanitizeDescription,
   mapEpisodeTitles,
+  formatTimeUntilAiring,
   type SeasonRef,
 } from "@/lib/anilist";
 
@@ -58,6 +59,18 @@ beforeAll(async () => {
                 ...media(99, "Anime 99"),
                 description: "Longa<br><br>\nsinopse aqui",
                 streamingEpisodes: [{ title: "Episode 1 - Asteroid Blues" }, { title: null }],
+              },
+            },
+          }));
+          return;
+        }
+        if (parsed.variables.id === 100) {
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({
+            data: {
+              Media: {
+                ...media(100, "Anime 100"),
+                nextAiringEpisode: { episode: 13, airingAt: 1789913760, timeUntilAiring: 432742 },
               },
             },
           }));
@@ -203,6 +216,37 @@ describe("rich detail fields", () => {
     expect(anime.description).toBe("Longa sinopse aqui");
     expect(anime.episodeTitles[0]).toBe("Asteroid Blues");
     expect(anime.episodeTitles[1]).toBeNull();
+  });
+
+  it("getAnimeById retorna null para nextAiringEpisode quando ausente", async () => {
+    const anime = await getAnimeById(99);
+    expect(anime.nextAiringEpisode).toBeNull();
+  });
+
+  it("getAnimeById mapeia nextAiringEpisode quando presente", async () => {
+    const anime = await getAnimeById(100);
+    expect(anime.nextAiringEpisode).toEqual({ episode: 13, airingAt: 1789913760, timeUntilAiring: 432742 });
+  });
+});
+
+describe("formatTimeUntilAiring", () => {
+  const now = new Date("2026-09-15T12:00:00Z").getTime();
+  const at = (diffSeconds: number) => now / 1000 + diffSeconds;
+
+  it("formata dias e horas", () => {
+    expect(formatTimeUntilAiring(at(5 * 86400 + 3 * 3600), now)).toBe("5d 3h");
+    expect(formatTimeUntilAiring(at(2 * 86400), now)).toBe("2d");
+  });
+
+  it("formata horas e minutos", () => {
+    expect(formatTimeUntilAiring(at(3 * 3600 + 12 * 60), now)).toBe("3h 12min");
+    expect(formatTimeUntilAiring(at(45 * 60), now)).toBe("45min");
+  });
+
+  it("retorna 'breve' abaixo de 1min e null quando já passou", () => {
+    expect(formatTimeUntilAiring(at(30), now)).toBe("breve");
+    expect(formatTimeUntilAiring(at(0), now)).toBeNull();
+    expect(formatTimeUntilAiring(at(-60), now)).toBeNull();
   });
 });
 });

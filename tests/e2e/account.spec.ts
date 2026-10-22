@@ -21,9 +21,9 @@ test("cross-user cannot see another user's watch progress", async ({ page }) => 
   await signUp(page, aEmail);
   await page.goto("/anime/1");
   await expect(page.getByRole("heading", { name: /Cowboy Bebop/i })).toBeVisible();
-  await page.getByRole("button", { name: "Assistido", exact: true }).first().click();
+  await page.getByRole("button", { name: "marcar episódio 1", exact: true }).click();
   await expect(page).toHaveURL(/\/anime\/\d+/);
-  await expect(page.getByRole("button", { name: "✓ Assistido" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "remover episódio 1", exact: true })).toBeVisible();
   const aUrl = page.url();
 
   // User A signs out
@@ -35,19 +35,30 @@ test("cross-user cannot see another user's watch progress", async ({ page }) => 
   // no watched episodes from A, no entry controls (no Remover/Status)
   await signUp(page, bEmail);
   await page.goto(aUrl);
-  await expect(page.getByRole("button", { name: "✓ Assistido" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "remover episódio 1", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Remover", exact: true })).toHaveCount(0);
   await expect(page.locator("p", { hasText: "Status:" })).toHaveCount(0);
 });
 
-test("deleting the account logs the user out and invalidates the session", async ({
+test("deleting the account requires the password and then logs the user out", async ({
   page,
 }) => {
   const email = `e2e+${Date.now()}@animelix.test`;
 
   await signUp(page, email);
   await page.goto("/watchlist");
-  await page.getByRole("button", { name: "Excluir conta" }).click();
+
+  // The delete form must ask for the password — a hijacked session alone
+  // must not be enough to destroy the account.
+  await page.getByRole("button", { name: "Excluir Conta" }).click();
+  await page.fill('input[name="password"]', "wrongpassword");
+  await page.getByRole("button", { name: "Confirmar exclusão" }).click();
+  await expect(page.getByText("Senha incorreta")).toBeVisible();
+  await expect(page).toHaveURL(/\/watchlist/);
+
+  // With the right password the account is deleted and the session dies.
+  await page.fill('input[name="password"]', "supersecret123");
+  await page.getByRole("button", { name: "Confirmar exclusão" }).click();
   await expect(page).toHaveURL(/\/login/);
 
   // The (now deleted) session can no longer reach protected routes

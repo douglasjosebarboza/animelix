@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { auth, signOut } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+import { requireUser, signOut } from "@/auth";
 import { deleteAccount } from "@/lib/account";
 import {
   removeFromWatchlist,
@@ -14,20 +14,13 @@ import {
   clearAllWatched,
   WatchlistError,
 } from "@/lib/watchlist";
-import { parsePositiveInt, parseTotal } from "@/lib/parse";
+import { parsePositiveInt } from "@/lib/parse";
+import { hitRateLimit } from "@/lib/rateLimit";
 
-async function requireUserId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  // A deleted account still carries a (stateless JWT) session until sign-out;
-  // treat a missing user row as unauthenticated so stale tokens are rejected.
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user) redirect("/login");
-  return session.user.id;
-}
+export type AccountActionResult = { error?: string };
 
 export async function removeFromWatchlistAction(formData: FormData): Promise<void> {
-  const userId = await requireUserId();
+  const { id: userId } = await requireUser();
   const anilistId = parsePositiveInt(formData.get("anilistId"));
   if (anilistId == null) redirect("/watchlist");
   await removeFromWatchlist(userId, anilistId);
@@ -35,16 +28,14 @@ export async function removeFromWatchlistAction(formData: FormData): Promise<voi
 }
 
 export async function markEpisodeAction(formData: FormData): Promise<void> {
-  const userId = await requireUserId();
+  const { id: userId } = await requireUser();
   const anilistId = parsePositiveInt(formData.get("anilistId"));
   if (anilistId == null) redirect("/watchlist");
-  const season = parsePositiveInt(formData.get("season"));
   const episode = parsePositiveInt(formData.get("episode"));
   const epPage = parsePositiveInt(formData.get("epPage"));
-  if (season == null || episode == null) redirect(`/anime/${anilistId}`);
-  const total = parseTotal(formData.get("total"));
+  if (episode == null) redirect(`/anime/${anilistId}`);
   try {
-    await markEpisodeWatched(userId, anilistId, season, episode, total);
+    await markEpisodeWatched(userId, anilistId, episode);
   } catch (err) {
     if (err instanceof WatchlistError) {
       redirect(animeUrl(anilistId, epPage, (err as Error).message));
@@ -55,15 +46,20 @@ export async function markEpisodeAction(formData: FormData): Promise<void> {
 }
 
 export async function removeEpisodeAction(formData: FormData): Promise<void> {
-  const userId = await requireUserId();
+  const { id: userId } = await requireUser();
   const anilistId = parsePositiveInt(formData.get("anilistId"));
   if (anilistId == null) redirect("/watchlist");
-  const season = parsePositiveInt(formData.get("season"));
   const episode = parsePositiveInt(formData.get("episode"));
   const epPage = parsePositiveInt(formData.get("epPage"));
-  if (season == null || episode == null) redirect(`/anime/${anilistId}`);
-  const total = parseTotal(formData.get("total"));
-  await removeEpisodeWatch(userId, anilistId, season, episode, total);
+  if (episode == null) redirect(`/anime/${anilistId}`);
+  try {
+    await removeEpisodeWatch(userId, anilistId, episode);
+  } catch (err) {
+    if (err instanceof WatchlistError) {
+      redirect(animeUrl(anilistId, epPage, (err as Error).message));
+    }
+    throw err;
+  }
   revalidatePath(`/anime/${anilistId}`);
 }
 
@@ -76,16 +72,14 @@ function animeUrl(anilistId: number, epPage: number | null, error?: string): str
 }
 
 export async function markUpToAction(formData: FormData): Promise<void> {
-  const userId = await requireUserId();
+  const { id: userId } = await requireUser();
   const anilistId = parsePositiveInt(formData.get("anilistId"));
   if (anilistId == null) redirect("/watchlist");
-  const season = parsePositiveInt(formData.get("season"));
   const episode = parsePositiveInt(formData.get("episode"));
   const epPage = parsePositiveInt(formData.get("epPage"));
-  if (season == null || episode == null) redirect(animeUrl(anilistId, epPage));
-  const total = parseTotal(formData.get("total"));
+  if (episode == null) redirect(animeUrl(anilistId, epPage));
   try {
-    await markEpisodesUpTo(userId, anilistId, episode, total);
+    await markEpisodesUpTo(userId, anilistId, episode);
   } catch (err) {
     if (err instanceof WatchlistError) {
       redirect(animeUrl(anilistId, epPage, (err as Error).message));
@@ -96,13 +90,12 @@ export async function markUpToAction(formData: FormData): Promise<void> {
 }
 
 export async function markAllAction(formData: FormData): Promise<void> {
-  const userId = await requireUserId();
+  const { id: userId } = await requireUser();
   const anilistId = parsePositiveInt(formData.get("anilistId"));
   if (anilistId == null) redirect("/watchlist");
   const epPage = parsePositiveInt(formData.get("epPage"));
-  const total = parseTotal(formData.get("total"));
   try {
-    await markAllWatched(userId, anilistId, total);
+    await markAllWatched(userId, anilistId);
   } catch (err) {
     if (err instanceof WatchlistError) {
       redirect(animeUrl(anilistId, epPage, (err as Error).message));
@@ -113,16 +106,52 @@ export async function markAllAction(formData: FormData): Promise<void> {
 }
 
 export async function clearAllAction(formData: FormData): Promise<void> {
-  const userId = await requireUserId();
+  const { id: userId } = await requireUser();
   const anilistId = parsePositiveInt(formData.get("anilistId"));
   if (anilistId == null) redirect("/watchlist");
-  const epPage = parsePositiveInt(formData.get("epPage"));
   await clearAllWatched(userId, anilistId);
   revalidatePath(`/anime/${anilistId}`);
 }
 
-export async function deleteAccountAction(): Promise<void> {
-  const userId = await requireUserId();
-  await deleteAccount(userId);
+/**
+ * Exclusão de conta.
+ *
+ * Exige a senha atual: sem isso, uma sessão sequestrada (ou um XSS) apaga a
+ * conta em definitivo, sem volta. A exclusão é irreversível — por isso o
+ * custo de ter que provar quem você é.
+ *
+ * A cota de tentativas também é consumida aqui: um atacante que/testa senhas
+ * contra a action não pode ficar testando indefinidamente.
+ */
+export async function deleteAccountAction(
+  _prev: AccountActionResult,
+  formData: FormData,
+): Promise<AccountActionResult> {
+  const user = await requireUser();
+
+  const rawPassword = formData.get("password");
+  const password = typeof rawPassword === "string" ? rawPassword : "";
+  if (!password) {
+    return { error: "Informe sua senha para confirmar a exclusão" };
+  }
+
+  // Cota própria: um atacante que teste senhas contra esta action não pode
+  // ficar testando indefinidamente (cada tentativa custa um bcrypt).
+  const limit = await hitRateLimit(
+    `delete-account:${user.id}`,
+    5,
+    15 * 60_000,
+  );
+  if (!limit.ok) {
+    return { error: "Muitas tentativas, aguarde" };
+  }
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) {
+    return { error: "Senha incorreta" };
+  }
+
+  await deleteAccount(user.id);
   await signOut({ redirectTo: "/login" });
+  return {};
 }
