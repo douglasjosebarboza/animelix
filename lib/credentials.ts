@@ -21,7 +21,7 @@ export function normalizeEmail(value: string): string {
 }
 
 export const credentialsSchema = z.object({
-  email: z.string().email("Informe um email válido"),
+  email: z.string().max(254, "Informe um email válido").email("Informe um email válido"),
   // bcrypt usa no máximo 72 bytes; acima disso o resto é descartado. Limitar
   // aqui evita processamento inútil e payloads grandes.
   password: z.string().min(8, "A senha precisa ter ao menos 8 caracteres").max(72, "A senha precisa ter no máximo 72 caracteres"),

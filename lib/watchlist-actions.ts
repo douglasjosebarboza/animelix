@@ -134,6 +134,9 @@ export async function deleteAccountAction(
   if (!password) {
     return { error: "Informe sua senha para confirmar a exclusão" };
   }
+  if (password.length > 72) {
+    return { error: "Senha incorreta" };
+  }
 
   // Cota própria: um atacante que teste senhas contra esta action não pode
   // ficar testando indefinidamente (cada tentativa custa um bcrypt).

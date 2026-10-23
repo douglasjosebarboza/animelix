@@ -1,9 +1,12 @@
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, hitRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/ip";
 import { getLimits } from "@/lib/limits";
 import { normalizeEmail } from "@/lib/credentials";
+
+const emailShape = z.string().max(254).email();
 
 /**
  * Hash de uma senha aleatória descartada (bcrypt, custo 12).
@@ -67,7 +70,13 @@ export async function verifyCredentials(
 ): Promise<VerifiedUser | null> {
   const email = normalizeEmail(typeof raw?.email === "string" ? raw.email : "");
   const password = typeof raw?.password === "string" ? raw.password : "";
-  if (!email || !password) return null;
+  // Guarda de formato e tamanho aqui também (além da Server Action), pois
+  // `POST /api/auth/callback/credentials` chama `authorize` diretamente:
+  // impede poluição de chaves no Redis com e-mails gigantes/inválidos e DoS
+  // de CPU no bcrypt com senhas acima de 72 caracteres.
+  if (!email || !password || password.length > 72 || !emailShape.safeParse(email).success) {
+    return null;
+  }
 
   const ip = getClientIp(request.headers);
   const limits = getLimits();

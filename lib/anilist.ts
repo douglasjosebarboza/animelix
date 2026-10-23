@@ -193,6 +193,7 @@ async function request<T>(
           "User-Agent": "Animelix/1.0"
         },
         body: JSON.stringify({ query, variables }),
+        signal: AbortSignal.timeout(8_000),
       });
     } catch (cause) {
       logEvent("anilist_error", { error: `network: ${(cause as Error).message}` });

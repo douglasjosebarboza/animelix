@@ -152,4 +152,19 @@ describe("verifyCredentials", () => {
       ),
     ).rejects.toBeInstanceOf(RateLimitError);
   });
+
+  it("rejeita senhas > 72 caracteres e e-mails malformados antes do Redis/bcrypt", async () => {
+    const tooLongPassword = "a".repeat(73);
+    const badEmail = await verifyCredentials(
+      { email: "nao-e-email", password: "supersecret123" },
+      req("1.1.1.1"),
+    );
+    const longPass = await verifyCredentials(
+      { email: "user@test.com", password: tooLongPassword },
+      req("1.1.1.1"),
+    );
+    expect(badEmail).toBeNull();
+    expect(longPass).toBeNull();
+    expect(prisma.user.findFirst).not.toHaveBeenCalled();
+  });
 });

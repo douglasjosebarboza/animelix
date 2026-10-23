@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { requireUser } from "@/auth";
 import { getCachedAnimeById } from "@/lib/anime-cache";
 import { getWatchEntry } from "@/lib/watchlist";
 import { computeProgress } from "@/lib/progress";
@@ -16,6 +16,21 @@ import {
   clearAllAction,
 } from "@/lib/watchlist-actions";
 
+/**
+ * Whitelist de mensagens/códigos aceitos no parâmetro `?error=`.
+ * Impede UI Spoofing / Content Injection via URLs maliciosas.
+ */
+const ALLOWED_ANIME_ERRORS: Record<string, string> = {
+  already_in_watchlist: "Este anime já está na sua watchlist.",
+  "already in watchlist": "Este anime já está na sua watchlist.",
+  "Total de episódios indisponível para este título":
+    "Total de episódios indisponível para este título",
+  "Episódio inválido": "Episódio inválido",
+  "Episódio inválido para este título": "Episódio inválido para este título",
+  "Anime não está na sua watchlist": "Anime não está na sua watchlist",
+  "Episódio já assistido": "Episódio já assistido",
+};
+
 export default async function AnimePage({
   params,
   searchParams,
@@ -23,16 +38,13 @@ export default async function AnimePage({
   params: Promise<{ anilistId: string }>;
   searchParams: Promise<{ error?: string | string[]; epPage?: string | string[] }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
   const { anilistId: raw } = await params;
   const { error: errorParam, epPage: epPageParam } = await searchParams;
-  const anilistId = Number(raw);
+  const anilistId = parsePositiveInt(raw);
 
-  if (!Number.isFinite(anilistId)) {
+  if (anilistId == null) {
     redirect("/");
   }
 
@@ -64,8 +76,9 @@ export default async function AnimePage({
     );
   }
 
-  const entry = await getWatchEntry(session.user.id, anilistId);
-  const error = Array.isArray(errorParam) ? errorParam[0] : errorParam;
+  const entry = await getWatchEntry(user.id, anilistId);
+  const rawError = Array.isArray(errorParam) ? errorParam[0] : errorParam;
+  const error = rawError ? (ALLOWED_ANIME_ERRORS[rawError] ?? null) : null;
   const total = anime.episodeCount ?? null;
   const watches = entry?.episodeWatches ?? [];
   const progress = computeProgress(watches, total);
@@ -118,9 +131,7 @@ export default async function AnimePage({
       <div className="mx-auto max-w-3xl">
         {error && (
           <p className="mb-4 rounded-md border border-amber-700 bg-amber-950 p-2 text-sm text-amber-300">
-            {error === "already_in_watchlist"
-              ? "Este anime já está na sua watchlist."
-              : error}
+            {error}
           </p>
         )}
         <div className="flex gap-6">

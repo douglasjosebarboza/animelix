@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "s4.anilist.co" },
       { protocol: "https", hostname: "cdn.anilist.co" },
-      { protocol: "https", hostname: "*.anilist.co" },
     ],
   },
   compress: true,

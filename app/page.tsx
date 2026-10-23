@@ -1,10 +1,15 @@
 import Image from "next/image";
+import { headers } from "next/headers";
 import { searchCachedAnime, getCachedSeasonalAnime } from "@/lib/anime-cache";
 import { currentSeason } from "@/lib/anilist";
 import { logEvent } from "@/lib/logger";
+import { hitRateLimit } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/ip";
+import { getLimits } from "@/lib/limits";
 
 /** Tamanho máximo da query — evita payloads absurdos enviados à AniList. */
 const MAX_QUERY_LENGTH = 100;
+const MIN_QUERY_LENGTH = 2;
 
 export default async function HomePage({
   searchParams,
@@ -15,7 +20,8 @@ export default async function HomePage({
 
   const rawQuery = (q ?? "").trim();
   const queryTooLong = rawQuery.length > MAX_QUERY_LENGTH;
-  const query = queryTooLong ? "" : rawQuery;
+  const queryTooShort = rawQuery.length > 0 && rawQuery.length < MIN_QUERY_LENGTH;
+  const query = queryTooLong || queryTooShort ? "" : rawQuery;
 
   let results: Awaited<ReturnType<typeof searchCachedAnime>> = [];
   let error: string | null = null;
@@ -23,8 +29,17 @@ export default async function HomePage({
   try {
     if (queryTooLong) {
       error = `Busca muito longa (máximo de ${MAX_QUERY_LENGTH} caracteres).`;
+    } else if (queryTooShort) {
+      error = `Digite ao menos ${MIN_QUERY_LENGTH} caracteres para buscar.`;
     } else if (query) {
-      results = await searchCachedAnime(query);
+      const limits = getLimits();
+      const ip = getClientIp(await headers());
+      const rl = await hitRateLimit(`search:${ip}`, limits.searchPerIp, limits.searchWindowMs);
+      if (!rl.ok) {
+        error = "Muitas buscas em sequência. Aguarde um instante e tente novamente.";
+      } else {
+        results = await searchCachedAnime(query);
+      }
     } else {
       const { season, year } = currentSeason();
       results = await getCachedSeasonalAnime(season, year);

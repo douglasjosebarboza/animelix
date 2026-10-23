@@ -60,16 +60,21 @@ export async function registerAction(
 
   // Case-insensitive: um e-mail legado em outra capitalização também conta
   // como "já cadastrado".
-  const existing = await prisma.user.findFirst({
-    where: { email: { equals: email, mode: "insensitive" } },
-  });
+  // Calculamos o hash em paralelo à consulta ao banco para igualar o tempo de
+  // resposta (~250ms) tanto para e-mails novos quanto já existentes, evitando
+  // oráculo de enumeração de usuários por timing.
+  const [existing, passwordHash] = await Promise.all([
+    prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+    }),
+    bcrypt.hash(password, BCRYPT_COST),
+  ]);
   if (existing) {
     // Mesmo destino do sucesso. A resposta NÃO pode revelar se o e-mail já
     // existia — seria um oráculo de enumeração de usuários.
     redirect("/login?created=1");
   }
 
-  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
   try {
     await prisma.user.create({ data: { email, passwordHash } });
   } catch (err) {
